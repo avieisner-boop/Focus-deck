@@ -507,6 +507,8 @@
           <button class="btn primary" id="cl-add">Add</button>
         </div>
         <div id="custom-links" style="margin-top:8px;"></div>
+        <hr class="sep" />
+        <button class="btn small" id="import-bookmarks-btn" style="width: 100%;">📥 Import bookmarks / URLs in bulk…</button>
       </details>
     </div>
 
@@ -651,6 +653,58 @@
 </div>
 
 <input type="file" id="send-file-input" style="display: none;" multiple />
+<input type="file" id="bookmarks-file-input" accept=".html,.htm,text/html" style="display: none;" />
+
+<!-- Bookmarks / URL import modal -->
+<div class="modal-backdrop" id="bookmarks-modal">
+  <div class="modal" style="max-width: 620px;">
+    <h3>📥 Import quick links</h3>
+    <div class="small muted" style="margin-bottom: 12px; line-height: 1.5;">
+      Two ways — pick whichever's faster on the device you're on.
+    </div>
+
+    <details open style="margin-bottom: 10px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">Option A — Upload a Chrome bookmarks file (best on Mac/PC)</summary>
+      <ol style="margin: 8px 0; padding-left: 22px; line-height: 1.6; font-size: 12.5px;">
+        <li>Open Chrome on your laptop → click <strong>⋮</strong> top-right → <strong>Bookmarks &amp; lists</strong> → <strong>Bookmark manager</strong></li>
+        <li>In the manager: click <strong>⋮</strong> top-right → <strong>Export bookmarks</strong></li>
+        <li>Save the HTML file (AirDrop it to your iPhone if you want to import there)</li>
+        <li>Tap the button below and pick the file</li>
+      </ol>
+      <button class="btn small primary" id="bm-pick-file">Choose bookmarks file</button>
+    </details>
+
+    <details style="margin-bottom: 10px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">Option B — Paste a list of URLs (works anywhere, incl. iPhone)</summary>
+      <div class="small muted" style="margin: 6px 0; line-height: 1.5;">
+        One URL per line. Optionally <code>Label | https://url</code> to give it a name.
+      </div>
+      <textarea id="bm-paste" rows="6" placeholder="https://mail.google.com&#10;Drive | https://drive.google.com&#10;https://chat.openai.com" style="font-family: ui-monospace, Menlo, monospace; font-size: 12px;"></textarea>
+      <button class="btn small" id="bm-paste-go" style="margin-top: 6px;">Parse URLs</button>
+    </details>
+
+    <div id="bm-review" style="display: none;">
+      <hr class="sep" />
+      <div class="small" style="margin-bottom: 8px;">
+        <strong id="bm-found-count"></strong> — tick the ones to add to your quick links.
+      </div>
+      <div class="row-gap" style="margin-bottom: 10px;">
+        <input id="bm-search" placeholder="Filter…" style="flex: 1; min-width: 140px;" />
+        <button class="btn small" id="bm-top10">Top 10</button>
+        <button class="btn small" id="bm-top25">Top 25</button>
+        <button class="btn small" id="bm-all">All</button>
+        <button class="btn small" id="bm-none">None</button>
+      </div>
+      <div id="bm-list" style="max-height: 44vh; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-md); padding: 4px 8px;"></div>
+      <div class="small muted" style="margin-top: 8px;" id="bm-counts"></div>
+    </div>
+
+    <div class="row-gap" style="margin-top: 16px; justify-content: flex-end;">
+      <button class="btn" id="bm-cancel">Cancel</button>
+      <button class="btn primary" id="bm-import" disabled>Import selected</button>
+    </div>
+  </div>
+</div>
 
 <script>
 /* ===========================================================
@@ -1730,6 +1784,147 @@ function addContact({ name, channel, address }) {
   return id;
 }
 
+/* ===========================================================
+   BOOKMARK / URL IMPORT — bulk-add to Custom Links
+   - Option A: parse a Chrome/Safari/Firefox bookmarks HTML export
+   - Option B: paste raw URLs (one per line, optional "Label | url")
+   Both feed the same review list so you tick exactly what you want.
+   =========================================================== */
+let _bmLinks = [];
+let _bmSelected = new Set();
+
+function parseBookmarkHtml(htmlText) {
+  let doc;
+  try { doc = new DOMParser().parseFromString(htmlText, "text/html"); }
+  catch { return []; }
+  const out = [];
+  const seen = new Set();
+  doc.querySelectorAll("a[href]").forEach(a => {
+    const href = (a.getAttribute("href") || "").trim();
+    if (!/^https?:/i.test(href)) return;
+    if (seen.has(href)) return;
+    seen.add(href);
+    const last = +(a.getAttribute("LAST_VISIT") || a.getAttribute("LAST_VISITED") || a.getAttribute("LAST_MODIFIED") || a.getAttribute("ADD_DATE") || "0");
+    out.push({
+      url: href,
+      title: (a.textContent || "").trim() || href,
+      lastVisited: last,
+    });
+  });
+  return out;
+}
+
+function parseUrlList(text) {
+  const out = [];
+  const seen = new Set();
+  text.split(/\r?\n/).forEach(line => {
+    line = line.trim();
+    if (!line) return;
+    let label = "", url = line;
+    if (line.includes("|")) {
+      const i = line.indexOf("|");
+      label = line.slice(0, i).trim();
+      url = line.slice(i + 1).trim();
+    }
+    // Auto-add https:// if it looks like a bare domain
+    if (!/^https?:\/\//i.test(url)) {
+      if (/^[\w.-]+\.[a-z]{2,}/i.test(url)) url = "https://" + url;
+      else return;
+    }
+    if (seen.has(url)) return;
+    seen.add(url);
+    if (!label) {
+      try { label = new URL(url).hostname.replace(/^www\./, ""); } catch { label = url; }
+    }
+    out.push({ url, title: label, lastVisited: 0 });
+  });
+  return out;
+}
+
+function openBookmarkImport() {
+  _bmLinks = [];
+  _bmSelected = new Set();
+  document.getElementById("bm-review").style.display = "none";
+  document.getElementById("bm-import").disabled = true;
+  document.getElementById("bm-paste").value = "";
+  document.getElementById("bm-search").value = "";
+  document.getElementById("bookmarks-modal").classList.add("show");
+}
+
+function bmShowReview() {
+  if (!_bmLinks.length) {
+    alert("No URLs found.");
+    return;
+  }
+  _bmLinks.sort((a, b) => (b.lastVisited || 0) - (a.lastVisited || 0));
+  // Pre-select top 10
+  _bmSelected = new Set(_bmLinks.slice(0, Math.min(10, _bmLinks.length)).map((_, i) => i));
+  document.getElementById("bm-review").style.display = "";
+  document.getElementById("bm-found-count").textContent = `${_bmLinks.length} link${_bmLinks.length === 1 ? "" : "s"} found`;
+  document.getElementById("bm-import").disabled = false;
+  renderBmList();
+}
+
+function renderBmList() {
+  const list = document.getElementById("bm-list");
+  const counts = document.getElementById("bm-counts");
+  const q = (document.getElementById("bm-search").value || "").trim().toLowerCase();
+  list.innerHTML = "";
+  let shown = 0;
+  _bmLinks.forEach((l, i) => {
+    if (q && !((l.title || "").toLowerCase().includes(q) || l.url.toLowerCase().includes(q))) return;
+    shown++;
+    const row = document.createElement("label");
+    row.style.cssText = "display: flex; gap: 10px; align-items: center; padding: 7px 4px; border-bottom: 1px solid var(--line-soft); cursor: pointer;";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.style.cssText = "width: 16px; flex: 0 0 16px;";
+    cb.checked = _bmSelected.has(i);
+    cb.onchange = () => {
+      if (cb.checked) _bmSelected.add(i); else _bmSelected.delete(i);
+      _bmUpdateCounts(shown, q);
+    };
+    const meta = document.createElement("div");
+    meta.style.cssText = "flex: 1; min-width: 0;";
+    meta.innerHTML = `
+      <div style="font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.title)}</div>
+      <div class="small muted" style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(l.url)}</div>
+    `;
+    row.appendChild(cb);
+    row.appendChild(meta);
+    list.appendChild(row);
+  });
+  if (!shown) {
+    list.innerHTML = `<div class="small muted" style="padding: 20px; text-align: center;">No matches.</div>`;
+  }
+  _bmUpdateCounts(shown, q);
+}
+
+function _bmUpdateCounts(shown, q) {
+  const counts = document.getElementById("bm-counts");
+  counts.textContent = `${_bmSelected.size} selected of ${_bmLinks.length}` + (q ? ` · ${shown} shown` : "");
+}
+
+function bmSelectTop(n) {
+  _bmSelected = new Set(_bmLinks.slice(0, Math.min(n, _bmLinks.length)).map((_, i) => i));
+  renderBmList();
+}
+
+function bmDoImport() {
+  state.customLinks = state.customLinks || [];
+  const existing = new Set(state.customLinks.map(l => l.url));
+  let added = 0;
+  for (const i of _bmSelected) {
+    const l = _bmLinks[i];
+    if (existing.has(l.url)) continue;
+    state.customLinks.push({ label: (l.title || l.url).slice(0, 60), url: l.url });
+    added++;
+  }
+  save(); render();
+  document.getElementById("bookmarks-modal").classList.remove("show");
+  toast(added ? `${added} link${added === 1 ? "" : "s"} added to Custom Links` : "Nothing new — all selected URLs are already in your list.");
+}
+
 /* ---------- paste image ---------- */
 async function handlePasteImage(e) {
   if (!e.clipboardData) return;
@@ -2345,6 +2540,34 @@ document.getElementById("nc-save").onclick = () => {
 document.getElementById("send-add-file").onclick = () => {
   document.getElementById("send-file-input").click();
 };
+/* Bookmark import wiring */
+document.getElementById("import-bookmarks-btn").onclick = openBookmarkImport;
+document.getElementById("bm-cancel").onclick = () => document.getElementById("bookmarks-modal").classList.remove("show");
+document.getElementById("bookmarks-modal").addEventListener("click", e => { if (e.target.id === "bookmarks-modal") e.currentTarget.classList.remove("show"); });
+document.getElementById("bm-pick-file").onclick = () => document.getElementById("bookmarks-file-input").click();
+document.getElementById("bookmarks-file-input").onchange = async (e) => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const txt = await f.text();
+    _bmLinks = parseBookmarkHtml(txt);
+    bmShowReview();
+  } catch (err) {
+    alert("Couldn't read that file: " + (err.message || err));
+  }
+  e.target.value = "";
+};
+document.getElementById("bm-paste-go").onclick = () => {
+  _bmLinks = parseUrlList(document.getElementById("bm-paste").value);
+  bmShowReview();
+};
+document.getElementById("bm-search").addEventListener("input", renderBmList);
+document.getElementById("bm-top10").onclick = () => bmSelectTop(10);
+document.getElementById("bm-top25").onclick = () => bmSelectTop(25);
+document.getElementById("bm-all").onclick = () => { _bmSelected = new Set(_bmLinks.map((_, i) => i)); renderBmList(); };
+document.getElementById("bm-none").onclick = () => { _bmSelected = new Set(); renderBmList(); };
+document.getElementById("bm-import").onclick = bmDoImport;
+
 document.getElementById("send-file-input").onchange = async (e) => {
   const inp = e.target;
   for (const f of inp.files) {
