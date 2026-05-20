@@ -541,6 +541,9 @@
     <div class="field-row"><label>Cloud sync</label>
       <div id="sync-section"></div>
     </div>
+    <div class="field-row"><label>Contacts</label>
+      <div id="contacts-section"></div>
+    </div>
     <div class="field-row"><label>Notifications</label>
       <div>
         <button class="btn small" id="req-notify">Enable browser reminders</button>
@@ -573,6 +576,82 @@
   </div>
 </div>
 
+<!-- Send modal -->
+<div class="modal-backdrop" id="send-modal">
+  <div class="modal" style="max-width: 580px;">
+    <h3>✉ Send <span id="send-task-title" style="font-weight: 500; color: var(--muted);"></span></h3>
+    <div class="field-row">
+      <label>To</label>
+      <div>
+        <select id="send-to"></select>
+        <div class="small muted" id="send-channel-hint" style="margin-top: 6px;"></div>
+        <details id="send-new-contact" style="margin-top: 8px;">
+          <summary style="color: var(--accent); font-size: 12px;">+ New contact</summary>
+          <div class="row" style="margin-top: 8px;">
+            <input id="nc-name" placeholder="Name (e.g. Chaya)" />
+          </div>
+          <div class="row" style="margin-top: 6px;">
+            <select id="nc-channel">
+              <option value="share">Native share — pick recipient on send</option>
+              <option value="email">Email</option>
+              <option value="sms">SMS / iMessage</option>
+              <option value="whatsapp">WhatsApp</option>
+            </select>
+          </div>
+          <div class="row" style="margin-top: 6px;">
+            <input id="nc-address" placeholder="Email / phone (with country code for WhatsApp)" />
+            <button class="btn primary small" id="nc-save">Save</button>
+          </div>
+          <div class="small muted" style="margin-top: 6px;">For native share, leave address blank — you'll pick the recipient on iOS's share sheet.</div>
+        </details>
+      </div>
+    </div>
+    <div class="field-row">
+      <label>Subject</label>
+      <input id="send-subject" />
+    </div>
+    <div class="field-row">
+      <label>Message</label>
+      <textarea id="send-body" rows="9" style="min-height: 160px;"></textarea>
+    </div>
+    <div class="field-row">
+      <label>Attachments</label>
+      <div>
+        <div id="send-attachments" class="attachments"></div>
+        <div class="row-gap" style="margin-top: 8px;">
+          <button class="btn small" id="send-add-file">📎 Add file</button>
+          <span class="small muted">or paste an image into the message ↑</span>
+        </div>
+        <div class="small muted" id="send-attach-note" style="margin-top: 6px;"></div>
+      </div>
+    </div>
+    <div class="field-row">
+      <label>Follow-up</label>
+      <div>
+        <label style="padding: 0; display: inline-flex; align-items: center; gap: 6px; font-size: 13px;">
+          <input type="checkbox" id="send-followup" checked style="width: auto;" />
+          <span>Create a follow-up task</span>
+        </label>
+        <div class="row" style="margin-top: 8px;">
+          <select id="send-followup-days">
+            <option value="1">Due tomorrow</option>
+            <option value="2" selected>Due in 2 days</option>
+            <option value="3">Due in 3 days</option>
+            <option value="7">Due in 1 week</option>
+            <option value="14">Due in 2 weeks</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="row-gap" style="margin-top: 16px; justify-content: flex-end;">
+      <button class="btn" id="send-cancel">Cancel</button>
+      <button class="btn primary" id="send-go">Send</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="send-file-input" style="display: none;" multiple />
+
 <script>
 /* ===========================================================
    FOCUS DECK
@@ -592,6 +671,7 @@ const DEFAULTS = {
     { id: "personal", name: "Personal", color: "#22c55e" },
   ],
   customLinks: [],
+  contacts: [],
   settings: {
     theme: "dark",
     defaultFocus: 25,
@@ -891,6 +971,7 @@ function renderTaskEl(t) {
       </div>
       <div class="task-actions">
         <button class="icon-btn" data-act="focus" title="Pick as focus task">🎯</button>
+        <button class="icon-btn" data-act="send" title="Send / share with follow-up">✉</button>
         <button class="icon-btn" data-act="expand" title="Expand">${t.expanded ? "▴" : "▾"}</button>
         <button class="icon-btn" data-act="snooze" title="Snooze 1 day">😴</button>
         <button class="icon-btn" data-act="delete" title="Delete">🗑</button>
@@ -1065,6 +1146,8 @@ function handleAct(id, act, e) {
       break;
     case "toggle-someday":
       t.someday = !t.someday; save(); render(); break;
+    case "send":
+      openSendModal(id); break;
     case "add-link": {
       const url = prompt("Paste a URL (Google Doc, Drive file, Notion page, Slack thread, etc.):");
       if (!url) return;
@@ -1332,6 +1415,321 @@ function fileToDataURL(f) {
   });
 }
 
+/* ===========================================================
+   SEND / SHARE — turn a task into a message + follow-up task
+   - Configure contacts (name + channel + address) in Settings
+   - ✉ on any task opens a send dialog pre-filled with task data
+   - Editable, can attach extra screenshots
+   - Sends via:
+     · navigator.share (iOS share sheet, native, includes files)
+     · mailto: / sms: / wa.me URL schemes for direct channels
+   - Auto-creates a "Follow up with X" task on success
+   =========================================================== */
+
+let _sendTaskId = null;
+let _sendDraftAttachments = [];
+
+function formatTaskAsMessage(t) {
+  const lines = [];
+  lines.push(t.title || "(untitled task)");
+  if (t.due) lines.push(`📅 Due ${t.due}`);
+  if (t.priority && t.priority !== "med") lines.push(`Priority: ${t.priority}`);
+  const project = state.projects.find(p => p.id === t.project);
+  if (project && project.id !== "inbox") lines.push(`Project: ${project.name}`);
+  if ((t.tags || []).length) lines.push(`Tags: ${t.tags.map(x => "#" + x).join(" ")}`);
+  if (t.notes) lines.push("", t.notes);
+  const links = (t.attachments || []).filter(a => a.kind === "link");
+  if (links.length) {
+    lines.push("", "Links:");
+    links.forEach(a => lines.push(`  • ${a.label || a.url}: ${a.url}`));
+  }
+  const files = (t.attachments || []).filter(a => a.kind === "file");
+  if (files.length) {
+    lines.push("", `Attached files: ${files.map(a => a.name).join(", ")}`);
+  }
+  if ((t.subtasks || []).length) {
+    lines.push("", "Subtasks:");
+    t.subtasks.forEach(s => lines.push(`  [${s.done ? "x" : " "}] ${s.title}`));
+  }
+  return lines.join("\n");
+}
+
+function _channelLabel(c) {
+  return ({
+    share: "Native share (pick recipient on send)",
+    email: "Email",
+    sms: "SMS / iMessage",
+    whatsapp: "WhatsApp",
+  })[c] || c;
+}
+
+function openSendModal(taskId) {
+  const t = state.tasks.find(x => x.id === taskId);
+  if (!t) return;
+  _sendTaskId = taskId;
+  _sendDraftAttachments = (t.attachments || []).map(a => ({ ...a }));
+  document.getElementById("send-task-title").textContent = "— " + (t.title || "");
+  document.getElementById("send-subject").value = t.title || "";
+  document.getElementById("send-body").value = formatTaskAsMessage(t);
+  document.getElementById("send-followup").checked = true;
+  document.getElementById("send-followup-days").value = "2";
+  document.getElementById("send-new-contact").open = false;
+  document.getElementById("nc-name").value = "";
+  document.getElementById("nc-address").value = "";
+  renderSendContacts();
+  renderSendAttachments();
+  document.getElementById("send-modal").classList.add("show");
+}
+
+function closeSendModal() {
+  document.getElementById("send-modal").classList.remove("show");
+  _sendTaskId = null;
+  _sendDraftAttachments = [];
+}
+
+function renderSendContacts() {
+  const sel = document.getElementById("send-to");
+  sel.innerHTML = "";
+  if (!(state.contacts || []).length) {
+    const o = document.createElement("option");
+    o.value = "";
+    o.textContent = "No contacts yet — add one ↓";
+    sel.appendChild(o);
+  } else {
+    state.contacts.forEach(c => {
+      const o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = `${c.name} — ${_channelLabel(c.channel)}` + (c.address ? ` (${c.address})` : "");
+      sel.appendChild(o);
+    });
+  }
+  _updateChannelHint();
+}
+
+function _currentSendContact() {
+  const id = document.getElementById("send-to").value;
+  return (state.contacts || []).find(c => c.id === id);
+}
+
+function _updateChannelHint() {
+  const c = _currentSendContact();
+  const hint = document.getElementById("send-channel-hint");
+  const note = document.getElementById("send-attach-note");
+  if (!c) {
+    hint.textContent = "";
+    note.textContent = "";
+    return;
+  }
+  hint.textContent = "Will send via " + _channelLabel(c.channel) + (c.address ? " → " + c.address : "");
+  if (c.channel === "share") {
+    note.textContent = "Files attach automatically through iOS's share sheet.";
+  } else if (c.channel === "email") {
+    note.textContent = "Email links don't support attachments — files are listed in the message body. Use the share-sheet contact if you need actual file uploads.";
+  } else if (c.channel === "sms" || c.channel === "whatsapp") {
+    note.textContent = c.channel === "sms"
+      ? "SMS links don't carry files. The body opens in Messages — manually attach photos there."
+      : "WhatsApp links don't carry files. The body opens in WhatsApp — manually attach photos there.";
+  } else {
+    note.textContent = "";
+  }
+}
+
+function renderSendAttachments() {
+  const el = document.getElementById("send-attachments");
+  if (!_sendDraftAttachments.length) {
+    el.innerHTML = `<span class="small muted">No attachments. Use the buttons below to add files or paste an image.</span>`;
+    return;
+  }
+  el.innerHTML = _sendDraftAttachments.map((a, i) => {
+    if (a.kind === "link") {
+      return `<span class="att"><span>🔗</span><a href="${escapeAttr(a.url)}" target="_blank" rel="noopener">${escapeHtml(a.label || a.url)}</a><span class="x" data-rm-send-att="${i}">✕</span></span>`;
+    }
+    if (a.kind === "file") {
+      const isImg = a.type && a.type.startsWith("image/");
+      return `<span class="att file"><span>${isImg ? "🖼" : "📄"}</span><span>${escapeHtml(a.name)}</span><span class="small muted"> ${Math.round((a.size || 0)/1024)}k</span><span class="x" data-rm-send-att="${i}">✕</span></span>`;
+    }
+    return "";
+  }).join("");
+  el.querySelectorAll("[data-rm-send-att]").forEach(b => {
+    b.onclick = () => {
+      _sendDraftAttachments.splice(+b.dataset.rmSendAtt, 1);
+      renderSendAttachments();
+    };
+  });
+}
+
+async function _attachmentsToFiles(atts) {
+  const out = [];
+  for (const a of atts) {
+    if (a.kind !== "file" || !a.data) continue;
+    try {
+      const res = await fetch(a.data);
+      const blob = await res.blob();
+      out.push(new File([blob], a.name || ("attachment-" + Date.now()), { type: a.type || blob.type || "application/octet-stream" }));
+    } catch (e) {
+      console.warn("Couldn't convert attachment to File:", a.name, e);
+    }
+  }
+  return out;
+}
+
+function _isIOS() { return /iPhone|iPad|iPod/i.test(navigator.userAgent); }
+
+async function performSend() {
+  const t = state.tasks.find(x => x.id === _sendTaskId);
+  if (!t) return closeSendModal();
+  const contact = _currentSendContact();
+  if (!contact) { toast("Pick a contact or add a new one"); return; }
+  const subject = document.getElementById("send-subject").value;
+  const body = document.getElementById("send-body").value;
+  const followup = document.getElementById("send-followup").checked;
+  const followupDays = +document.getElementById("send-followup-days").value || 2;
+
+  const btn = document.getElementById("send-go");
+  btn.disabled = true;
+  btn.textContent = "Opening…";
+
+  let sent = false;
+  try {
+    if (contact.channel === "share") {
+      const files = await _attachmentsToFiles(_sendDraftAttachments);
+      const shareData = { title: subject, text: body };
+      if (files.length && navigator.canShare && navigator.canShare({ files })) {
+        shareData.files = files;
+      }
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+          sent = true;
+        } catch (e) {
+          if (e && e.name === "AbortError") { sent = false; }
+          else { throw e; }
+        }
+      } else {
+        // Desktop / no share support — copy to clipboard
+        await navigator.clipboard.writeText(`${subject}\n\n${body}`);
+        toast("Message copied. Open your messaging app and paste.");
+        sent = true;
+      }
+    } else if (contact.channel === "email") {
+      const url = `mailto:${encodeURIComponent(contact.address || "")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      window.location.href = url;
+      sent = true;
+    } else if (contact.channel === "sms") {
+      const sep = _isIOS() ? "&" : "?";
+      const url = `sms:${contact.address || ""}${sep}body=${encodeURIComponent(body)}`;
+      window.location.href = url;
+      sent = true;
+    } else if (contact.channel === "whatsapp") {
+      const phone = (contact.address || "").replace(/[^\d]/g, "");
+      const url = `https://wa.me/${phone}?text=${encodeURIComponent(body)}`;
+      window.open(url, "_blank", "noopener");
+      sent = true;
+    }
+  } catch (e) {
+    console.error("Send failed:", e);
+    alert("Couldn't send:\n\n" + (e.message || e));
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Send";
+
+  if (sent && followup) {
+    createFollowUp(t, contact, followupDays);
+  }
+  if (sent) {
+    closeSendModal();
+  }
+}
+
+function createFollowUp(orig, contact, daysAhead) {
+  const due = new Date(); due.setHours(0,0,0,0); due.setDate(due.getDate() + (daysAhead || 1));
+  const dueISO = due.toISOString().slice(0, 10);
+  const followup = {
+    id: uid(),
+    title: `Follow up with ${contact.name}: ${orig.title || "(task)"}`,
+    notes: `Sent ${new Date().toLocaleString()} via ${_channelLabel(contact.channel)}${contact.address ? ` (${contact.address})` : ""}.\n\nOriginal task: ${orig.title || ""}`,
+    tags: [...new Set([...(orig.tags || []), "follow-up"])],
+    project: orig.project || "inbox",
+    priority: "med",
+    due: dueISO,
+    energy: null,
+    subtasks: [],
+    attachments: [],
+    recurring: null,
+    someday: false,
+    done: false,
+    createdAt: Date.now(),
+    followupFor: orig.id,
+  };
+  state.tasks.unshift(followup);
+  save(); render();
+  toast(`Follow-up created — due ${dueISO}`);
+}
+
+/* ---------- contacts ---------- */
+function renderContactsSection() {
+  const el = document.getElementById("contacts-section");
+  if (!el) return;
+  const list = state.contacts || [];
+  const items = list.length
+    ? list.map(c => `
+        <div class="att" style="display: flex; gap: 6px; align-items: center; max-width: 100%; margin-bottom: 4px;">
+          <strong style="margin-right: 4px;">${escapeHtml(c.name)}</strong>
+          <span class="small muted">${escapeHtml(_channelLabel(c.channel))}${c.address ? " · " + escapeHtml(c.address) : ""}</span>
+          <span class="x" data-rm-contact="${escapeAttr(c.id)}" title="Remove">✕</span>
+        </div>`).join("")
+    : `<div class="small muted" style="margin-bottom: 8px;">No contacts yet. Add one below — then on any task tap ✉ to send.</div>`;
+  el.innerHTML = `
+    <div>${items}</div>
+    <details style="margin-top: 8px;">
+      <summary style="color: var(--accent); font-size: 12px;">+ Add contact</summary>
+      <div class="row" style="margin-top: 8px;"><input id="contacts-new-name" placeholder="Name (e.g. Chaya)" /></div>
+      <div class="row" style="margin-top: 6px;">
+        <select id="contacts-new-channel">
+          <option value="share">Native share (recommended — supports attachments)</option>
+          <option value="email">Email</option>
+          <option value="sms">SMS / iMessage</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select>
+      </div>
+      <div class="row" style="margin-top: 6px;">
+        <input id="contacts-new-address" placeholder="Email / phone (with country code for WhatsApp)" />
+        <button class="btn primary small" id="contacts-new-save">Save</button>
+      </div>
+      <div class="small muted" style="margin-top: 6px;">For native share you can leave the address blank — iOS shows your real contacts on send.</div>
+    </details>
+  `;
+  el.querySelectorAll("[data-rm-contact]").forEach(b => {
+    b.onclick = () => {
+      const id = b.dataset.rmContact;
+      const c = state.contacts.find(x => x.id === id);
+      if (!c) return;
+      if (!confirm(`Remove contact "${c.name}"?`)) return;
+      state.contacts = state.contacts.filter(x => x.id !== id);
+      save(); renderContactsSection();
+    };
+  });
+  el.querySelector("#contacts-new-save").onclick = () => {
+    const name = el.querySelector("#contacts-new-name").value.trim();
+    const channel = el.querySelector("#contacts-new-channel").value;
+    const address = el.querySelector("#contacts-new-address").value.trim();
+    if (!name) return toast("Name is required");
+    addContact({ name, channel, address });
+    renderContactsSection();
+  };
+}
+
+function addContact({ name, channel, address }) {
+  state.contacts = state.contacts || [];
+  let baseId = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 24) || uid();
+  let id = baseId, n = 1;
+  while (state.contacts.find(c => c.id === id)) { id = baseId + "-" + (++n); }
+  state.contacts.push({ id, name, channel, address: address || "" });
+  save();
+  return id;
+}
+
 /* ---------- paste image ---------- */
 async function handlePasteImage(e) {
   if (!e.clipboardData) return;
@@ -1358,6 +1756,15 @@ async function handlePasteImage(e) {
     });
   }
   if (!attachments.length) return;
+
+  // 0. Pasted inside the Send modal → add to send draft
+  const sendModal = document.getElementById("send-modal");
+  if (sendModal && sendModal.classList.contains("show") && e.target && e.target.closest && e.target.closest("#send-modal")) {
+    _sendDraftAttachments.push(...attachments);
+    renderSendAttachments();
+    toast(attachments.length === 1 ? "Image added to message" : `${attachments.length} images added`);
+    return;
+  }
 
   // 1. Pasted inside an expanded task → attach to that task
   const expandedTaskEl = e.target && e.target.closest && e.target.closest(".task");
@@ -1910,10 +2317,46 @@ document.getElementById("cl-add").onclick = () => {
 function openSettings() {
   document.getElementById("settings-modal").classList.add("show");
   renderSyncSection();
+  renderContactsSection();
 }
 document.getElementById("settings-btn").onclick = openSettings;
 document.getElementById("settings-close").onclick = () => document.getElementById("settings-modal").classList.remove("show");
 document.getElementById("settings-modal").addEventListener("click", e => { if (e.target.id === "settings-modal") e.currentTarget.classList.remove("show"); });
+
+/* Send modal wiring */
+document.getElementById("send-cancel").onclick = closeSendModal;
+document.getElementById("send-go").onclick = performSend;
+document.getElementById("send-modal").addEventListener("click", e => { if (e.target.id === "send-modal") closeSendModal(); });
+document.getElementById("send-to").addEventListener("change", _updateChannelHint);
+document.getElementById("nc-save").onclick = () => {
+  const name = document.getElementById("nc-name").value.trim();
+  const channel = document.getElementById("nc-channel").value;
+  const address = document.getElementById("nc-address").value.trim();
+  if (!name) return toast("Name is required");
+  const id = addContact({ name, channel, address });
+  renderSendContacts();
+  document.getElementById("send-to").value = id;
+  _updateChannelHint();
+  document.getElementById("send-new-contact").open = false;
+  document.getElementById("nc-name").value = "";
+  document.getElementById("nc-address").value = "";
+  toast("Contact saved");
+};
+document.getElementById("send-add-file").onclick = () => {
+  document.getElementById("send-file-input").click();
+};
+document.getElementById("send-file-input").onchange = async (e) => {
+  const inp = e.target;
+  for (const f of inp.files) {
+    if (f.size > 4 * 1024 * 1024) {
+      if (!confirm(`${f.name} is ${Math.round(f.size/1024)}KB — large attachments slow share down. Continue?`)) continue;
+    }
+    const data = await fileToDataURL(f);
+    _sendDraftAttachments.push({ kind: "file", name: f.name, type: f.type, size: f.size, data });
+  }
+  inp.value = "";
+  renderSendAttachments();
+};
 
 /* Sync wiring */
 document.getElementById("sync-status").onclick = () => {
