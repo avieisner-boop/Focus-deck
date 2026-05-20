@@ -273,6 +273,41 @@
   .att a { color: var(--accent-2); text-decoration: none; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .att .x { color: var(--muted); margin-left: 4px; cursor: pointer; }
   .att.file { color: var(--text); }
+  .att.img { padding: 4px 8px 4px 4px; }
+  .att.img .thumb {
+    width: 36px; height: 36px; border-radius: 4px; object-fit: cover;
+    background: var(--panel-2); cursor: zoom-in; display: block; border: 1px solid var(--line-soft);
+  }
+  .att.img .thumb:hover { opacity: .85; }
+  .att.img .name { color: var(--text); max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Lightbox */
+  .lightbox {
+    position: fixed; inset: 0; background: rgba(0,0,0,.88);
+    display: none; align-items: center; justify-content: center;
+    z-index: 100; padding: 24px; cursor: zoom-out;
+    backdrop-filter: blur(6px);
+  }
+  .lightbox.show { display: flex; }
+  .lightbox img {
+    max-width: 100%; max-height: calc(100vh - 80px);
+    border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    cursor: default;
+  }
+  .lightbox .lb-close {
+    position: absolute; top: 16px; right: 20px;
+    background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.18);
+    color: white; font-size: 18px; width: 36px; height: 36px;
+    border-radius: 50%; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+  }
+  .lightbox .lb-close:hover { background: rgba(255,255,255,.22); }
+  .lightbox .lb-caption {
+    position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%);
+    color: rgba(255,255,255,.75); font-size: 12px;
+    background: rgba(0,0,0,.45); padding: 5px 14px; border-radius: 999px;
+    max-width: 70vw; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
 
   .subtasks { margin-top: 6px; }
   .sub {
@@ -654,6 +689,13 @@
 
 <input type="file" id="send-file-input" style="display: none;" multiple />
 <input type="file" id="bookmarks-file-input" accept=".html,.htm,text/html" style="display: none;" />
+
+<!-- Image lightbox -->
+<div class="lightbox" id="lightbox">
+  <button class="lb-close" id="lb-close" title="Close (Esc)">✕</button>
+  <img id="lb-img" alt="" />
+  <div class="lb-caption" id="lb-caption"></div>
+</div>
 
 <!-- Bookmarks / URL import modal -->
 <div class="modal-backdrop" id="bookmarks-modal">
@@ -1171,7 +1213,15 @@ function renderAttachment(a, i) {
   }
   if (a.kind === "file") {
     const isImg = a.type && a.type.startsWith("image/");
-    return `<span class="att file"><span>${isImg?"🖼":"📄"}</span><a href="${a.data}" download="${escapeAttr(a.name)}" target="_blank">${escapeHtml(a.name)}</a><span class="small muted"> ${Math.round(a.size/1024)}k</span><span class="x" data-act="rm-att" data-i="${i}">✕</span></span>`;
+    if (isImg) {
+      return `<span class="att file img">`
+        + `<img class="thumb" src="${a.data}" alt="${escapeAttr(a.name)}" data-lightbox="1" data-lb-name="${escapeAttr(a.name)}" />`
+        + `<span class="name">${escapeHtml(a.name)}</span>`
+        + `<span class="small muted"> ${Math.round(a.size/1024)}k</span>`
+        + `<span class="x" data-act="rm-att" data-i="${i}">✕</span>`
+        + `</span>`;
+    }
+    return `<span class="att file"><span>📄</span><a href="${a.data}" download="${escapeAttr(a.name)}" target="_blank">${escapeHtml(a.name)}</a><span class="small muted"> ${Math.round(a.size/1024)}k</span><span class="x" data-act="rm-att" data-i="${i}">✕</span></span>`;
   }
   return "";
 }
@@ -1600,6 +1650,14 @@ function renderSendAttachments() {
     }
     if (a.kind === "file") {
       const isImg = a.type && a.type.startsWith("image/");
+      if (isImg && a.data) {
+        return `<span class="att file img">`
+          + `<img class="thumb" src="${a.data}" alt="${escapeAttr(a.name)}" data-lightbox="1" data-lb-name="${escapeAttr(a.name)}" />`
+          + `<span class="name">${escapeHtml(a.name)}</span>`
+          + `<span class="small muted"> ${Math.round((a.size || 0)/1024)}k</span>`
+          + `<span class="x" data-rm-send-att="${i}">✕</span>`
+          + `</span>`;
+      }
       return `<span class="att file"><span>${isImg ? "🖼" : "📄"}</span><span>${escapeHtml(a.name)}</span><span class="small muted"> ${Math.round((a.size || 0)/1024)}k</span><span class="x" data-rm-send-att="${i}">✕</span></span>`;
     }
     return "";
@@ -2603,6 +2661,9 @@ document.getElementById("req-notify").onclick = async () => {
 };
 
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && document.getElementById("lightbox").classList.contains("show")) {
+    closeLightbox(); return;
+  }
   if (e.target.matches("input, textarea, [contenteditable]")) return;
   if (e.key === "/") { e.preventDefault(); document.getElementById("search").focus(); }
   else if (e.key.toLowerCase() === "n") { e.preventDefault(); document.getElementById("capture").focus(); }
@@ -2610,6 +2671,30 @@ document.addEventListener("keydown", (e) => {
 });
 
 document.addEventListener("paste", (e) => { handlePasteImage(e).catch(err => { console.error(err); toast("Paste failed: " + (err.message || err)); }); });
+
+/* Image lightbox — click any image thumbnail to view full-size, no download */
+function openLightbox(src, name) {
+  const lb = document.getElementById("lightbox");
+  document.getElementById("lb-img").src = src;
+  document.getElementById("lb-caption").textContent = name || "";
+  lb.classList.add("show");
+}
+function closeLightbox() {
+  const lb = document.getElementById("lightbox");
+  lb.classList.remove("show");
+  document.getElementById("lb-img").src = "";
+}
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-lightbox]");
+  if (t) {
+    e.preventDefault();
+    openLightbox(t.getAttribute("src") || t.dataset.lightbox, t.dataset.lbName || "");
+  }
+});
+document.getElementById("lb-close").onclick = closeLightbox;
+document.getElementById("lightbox").addEventListener("click", (e) => {
+  if (e.target.id === "lightbox") closeLightbox();
+});
 
 /* Init pickers from settings */
 document.getElementById("default-focus").value = state.settings.defaultFocus || 25;
