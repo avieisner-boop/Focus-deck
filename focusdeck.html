@@ -426,7 +426,8 @@
     <div class="field-row"><label>Quick start</label>
       <div class="small muted">
         <strong>/</strong> focus search · <strong>n</strong> new task · <strong>f</strong> toggle focus<br/>
-        Capture syntax: <code>#tag</code> <code>@project</code> <code>!high</code> <code>!med</code> <code>!low</code> <code>^today</code> <code>^tomorrow</code> <code>^fri</code> <code>^2026-06-01</code> <code>~30m</code> (energy)
+        Capture syntax: <code>#tag</code> <code>@project</code> <code>!high</code> <code>!med</code> <code>!low</code> <code>^today</code> <code>^tomorrow</code> <code>^fri</code> <code>^2026-06-01</code> <code>~30m</code> (energy)<br/>
+        <strong>Paste an image</strong> (📋 from Photos / clipboard) anywhere → new task with the image attached, or attaches to whichever task is expanded.
       </div>
     </div>
     <div class="row" style="margin-top:12px; justify-content:flex-end;">
@@ -1193,6 +1194,75 @@ function fileToDataURL(f) {
     r.readAsDataURL(f);
   });
 }
+
+/* ---------- paste image ---------- */
+async function handlePasteImage(e) {
+  if (!e.clipboardData) return;
+  const items = Array.from(e.clipboardData.items || []);
+  const imageItems = items.filter(it => it.type && it.type.startsWith("image/"));
+  if (!imageItems.length) return;
+  e.preventDefault();
+
+  const attachments = [];
+  for (const item of imageItems) {
+    const file = item.getAsFile();
+    if (!file) continue;
+    if (file.size > 4 * 1024 * 1024) {
+      if (!confirm(`Pasted image is ${Math.round(file.size/1024)}KB. Large images eat your local storage and slow sync. Continue?`)) continue;
+    }
+    const data = await fileToDataURL(file);
+    const ext = (file.type.split("/")[1] || "png").replace("jpeg","jpg");
+    attachments.push({
+      kind: "file",
+      name: file.name || `pasted-${Date.now()}.${ext}`,
+      type: file.type,
+      size: file.size,
+      data,
+    });
+  }
+  if (!attachments.length) return;
+
+  // 1. Pasted inside an expanded task → attach to that task
+  const expandedTaskEl = e.target && e.target.closest && e.target.closest(".task");
+  if (expandedTaskEl && expandedTaskEl.dataset.id) {
+    const t = state.tasks.find(x => x.id === expandedTaskEl.dataset.id);
+    if (t) {
+      (t.attachments ||= []).push(...attachments);
+      t.expanded = true;
+      save(); render();
+      toast(attachments.length === 1 ? "Image attached" : `${attachments.length} images attached`);
+      return;
+    }
+  }
+
+  // 2. Pasted in capture bar → new task using the bar's text as the title
+  const captureEl = document.getElementById("capture");
+  const usingCapture = e.target === captureEl;
+  const text = usingCapture ? captureEl.value.trim() : "";
+  const parsed = text ? parseCapture(text) : { title: "", tags: [], project: null, priority: "med", due: null, energy: null };
+  const t = {
+    id: uid(),
+    title: parsed.title || `Image — ${new Date().toLocaleString()}`,
+    notes: "",
+    tags: parsed.tags || [],
+    project: (parsed.project && state.projects.find(p => p.id === parsed.project)) ? parsed.project : "inbox",
+    priority: parsed.priority || "med",
+    due: parsed.due,
+    energy: parsed.energy && ["low","med","high"].includes(parsed.energy) ? parsed.energy : null,
+    subtasks: [],
+    attachments,
+    recurring: null,
+    someday: false,
+    done: false,
+    createdAt: Date.now(),
+    expanded: true,
+  };
+  state.tasks.unshift(t);
+  if (usingCapture) captureEl.value = "";
+  save(); render();
+  toast("Task created with image");
+}
+
 function exportData() {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -1735,6 +1805,8 @@ document.addEventListener("keydown", (e) => {
   else if (e.key.toLowerCase() === "n") { e.preventDefault(); document.getElementById("capture").focus(); }
   else if (e.key.toLowerCase() === "f") { document.getElementById("focus-btn").click(); }
 });
+
+document.addEventListener("paste", (e) => { handlePasteImage(e).catch(err => { console.error(err); toast("Paste failed: " + (err.message || err)); }); });
 
 /* Init pickers from settings */
 document.getElementById("default-focus").value = state.settings.defaultFocus || 25;
