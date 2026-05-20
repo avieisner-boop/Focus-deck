@@ -548,6 +548,12 @@
     </div>
 
     <div class="card">
+      <h3>🤖 AI Bridge</h3>
+      <div class="small muted" style="margin-bottom:8px;">Plan in a chat session, sync structured tasks back here.</div>
+      <button class="btn small primary" id="ai-bridge-open" style="width: 100%;">Open AI Bridge…</button>
+    </div>
+
+    <div class="card">
       <h3>🗓 This Month</h3>
       <div class="cal" id="cal"></div>
     </div>
@@ -744,6 +750,61 @@
     <div class="row-gap" style="margin-top: 16px; justify-content: flex-end;">
       <button class="btn" id="bm-cancel">Cancel</button>
       <button class="btn primary" id="bm-import" disabled>Import selected</button>
+    </div>
+  </div>
+</div>
+
+<!-- AI Bridge modal — round-trip planning with an AI session -->
+<div class="modal-backdrop" id="ai-bridge-modal">
+  <div class="modal" style="max-width: 720px;">
+    <h3>🤖 AI Bridge — plan with AI, import back</h3>
+    <div class="small muted" style="margin-bottom: 14px; line-height: 1.5;">
+      Hand a planning task to any AI (Claude, ChatGPT, etc.). It returns a JSON bundle. You paste it here. Matching IDs <strong>update in place</strong>; new IDs <strong>get added</strong>; nothing else is touched.
+    </div>
+
+    <details open style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">1 — Copy the prompt → paste into your AI session</summary>
+      <div class="small muted" style="margin: 8px 0; line-height: 1.5;">
+        Tip: paste your chat URL into the prompt before sending — the AI will attach it to every task so you can jump back.
+      </div>
+      <label style="display: flex; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 12.5px;">
+        <input type="checkbox" id="ai-include-state" style="width: auto;" />
+        <span>Include my current Focus Deck state (so the AI can update existing items, not just add)</span>
+      </label>
+      <textarea id="ai-prompt-text" rows="14" readonly style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; line-height: 1.45;"></textarea>
+      <div class="row-gap" style="margin-top: 6px;">
+        <button class="btn small primary" id="ai-copy-prompt">📋 Copy prompt</button>
+        <span class="small muted" id="ai-copy-feedback"></span>
+      </div>
+    </details>
+
+    <details style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">2 — Paste the AI's bundle JSON → preview → import</summary>
+      <div class="small muted" style="margin: 8px 0; line-height: 1.5;">
+        Paste the entire <code>{ "format": "focusdeck-bundle", ... }</code> object. Upsert is safe: existing items not in the bundle stay as they are.
+      </div>
+      <textarea id="ai-import-text" rows="8" placeholder='{"format": "focusdeck-bundle", "version": 1, "projects": [...], "tasks": [...]}' style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px;"></textarea>
+      <div id="ai-import-preview" class="small" style="margin-top: 8px; min-height: 20px;"></div>
+      <div class="row-gap" style="margin-top: 6px;">
+        <button class="btn small" id="ai-preview-btn">Preview changes</button>
+        <button class="btn small primary" id="ai-import-btn" disabled>Import bundle</button>
+      </div>
+    </details>
+
+    <details style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">3 — Export current state (for the AI to update)</summary>
+      <div class="small muted" style="margin: 8px 0; line-height: 1.5;">
+        Copy this and paste it into your AI session when you want updates rather than additions — IDs will round-trip correctly.
+      </div>
+      <div class="row-gap">
+        <button class="btn small" id="ai-copy-bundle">📋 Copy current bundle</button>
+        <button class="btn small" id="ai-download-bundle">⬇ Download bundle</button>
+        <span class="small muted" id="ai-export-feedback"></span>
+      </div>
+    </details>
+
+    <div class="row-gap" style="margin-top: 14px; justify-content: flex-end;">
+      <button class="btn" id="ai-bridge-close">Close</button>
     </div>
   </div>
 </div>
@@ -2085,6 +2146,223 @@ function importData() {
   inp.click();
 }
 
+/* ===========================================================
+   AI BRIDGE — round-trip planning via an AI chat session
+   - Copy a structured prompt → paste into Claude/ChatGPT/etc.
+   - AI returns a JSON bundle in our schema
+   - Import: upsert by stable id (no deletions, no clobbering)
+   - Export: emit current state as a bundle for round-trip updates
+   =========================================================== */
+function bundleExportObject() {
+  return {
+    format: "focusdeck-bundle",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    projects: (state.projects || []).map(p => ({
+      id: p.id, name: p.name, color: p.color || null
+    })),
+    tasks: (state.tasks || []).filter(t => !t.done).map(t => ({
+      id: t.id,
+      title: t.title || "",
+      project: t.project || "inbox",
+      tags: t.tags || [],
+      priority: t.priority || "med",
+      due: t.due || null,
+      followUp: t.followUp || null,
+      energy: t.energy || null,
+      notes: t.notes || "",
+      someday: !!t.someday,
+      recurring: t.recurring || null,
+      subtasks: (t.subtasks || []).map(s => ({
+        id: s.id, title: s.title || "", done: !!s.done
+      })),
+      attachments: (t.attachments || []).filter(a => a.kind === "link").map(a => ({
+        kind: "link", url: a.url, label: a.label || a.url
+      }))
+    }))
+  };
+}
+
+function bundleImport(bundle) {
+  if (!bundle || bundle.format !== "focusdeck-bundle") {
+    throw new Error("Not a Focus Deck bundle (missing format: \"focusdeck-bundle\").");
+  }
+  const counts = { projAdded: 0, projUpdated: 0, taskAdded: 0, taskUpdated: 0, subAdded: 0, attAdded: 0 };
+
+  (bundle.projects || []).forEach(bp => {
+    if (!bp.id || !bp.name) return;
+    const existing = (state.projects ||= []).find(p => p.id === bp.id);
+    if (existing) {
+      existing.name = bp.name;
+      if (bp.color) existing.color = bp.color;
+      counts.projUpdated++;
+    } else {
+      const palette = ["#7c5cff","#5cc8ff","#22c55e","#f59e0b","#ec4899","#ef4444"];
+      state.projects.push({
+        id: bp.id, name: bp.name,
+        color: bp.color || palette[Math.floor(Math.random()*palette.length)]
+      });
+      counts.projAdded++;
+    }
+  });
+
+  (bundle.tasks || []).forEach(bt => {
+    if (!bt.id || !bt.title) return;
+    const existing = state.tasks.find(t => t.id === bt.id);
+    const patch = {
+      title: bt.title,
+      project: bt.project || "inbox",
+      tags: Array.isArray(bt.tags) ? bt.tags : [],
+      priority: ["high","med","low"].includes(bt.priority) ? bt.priority : "med",
+      due: bt.due || null,
+      followUp: bt.followUp || null,
+      energy: bt.energy || null,
+      notes: bt.notes || "",
+      someday: !!bt.someday,
+      recurring: bt.recurring || null,
+    };
+    if (existing) {
+      Object.assign(existing, patch);
+      if (Array.isArray(bt.subtasks)) {
+        const exMap = new Map((existing.subtasks || []).map(s => [s.id, s]));
+        existing.subtasks = bt.subtasks.map(bs => {
+          const ex = exMap.get(bs.id);
+          if (ex) { ex.title = bs.title || ex.title; return ex; }
+          counts.subAdded++;
+          return { id: bs.id || uid(), title: bs.title || "", done: !!bs.done };
+        });
+      }
+      if (Array.isArray(bt.attachments)) {
+        const urls = new Set((existing.attachments || [])
+          .filter(a => a.kind === "link").map(a => a.url));
+        bt.attachments.forEach(a => {
+          if (a.kind === "link" && a.url && !urls.has(a.url)) {
+            (existing.attachments ||= []).push({ kind: "link", url: a.url, label: a.label || a.url });
+            urls.add(a.url);
+            counts.attAdded++;
+          }
+        });
+      }
+      counts.taskUpdated++;
+    } else {
+      state.tasks.push({
+        id: bt.id,
+        ...patch,
+        done: false,
+        completedAt: null,
+        expanded: false,
+        focus: false,
+        createdAt: Date.now(),
+        subtasks: (Array.isArray(bt.subtasks) ? bt.subtasks : []).map(s => ({
+          id: s.id || uid(), title: s.title || "", done: !!s.done
+        })),
+        attachments: (Array.isArray(bt.attachments) ? bt.attachments : [])
+          .filter(a => a.kind === "link" && a.url)
+          .map(a => ({ kind: "link", url: a.url, label: a.label || a.url }))
+      });
+      counts.taskAdded++;
+    }
+  });
+
+  return counts;
+}
+
+function bundlePreview(bundle) {
+  if (!bundle || bundle.format !== "focusdeck-bundle") {
+    throw new Error("Not a Focus Deck bundle.");
+  }
+  let projAdd = 0, projUp = 0, taskAdd = 0, taskUp = 0;
+  (bundle.projects || []).forEach(bp => {
+    if (!bp.id) return;
+    if (state.projects.find(p => p.id === bp.id)) projUp++; else projAdd++;
+  });
+  (bundle.tasks || []).forEach(bt => {
+    if (!bt.id) return;
+    if (state.tasks.find(t => t.id === bt.id)) taskUp++; else taskAdd++;
+  });
+  return { projAdd, projUp, taskAdd, taskUp,
+           total: (bundle.tasks || []).length, projTotal: (bundle.projects || []).length };
+}
+
+function buildAiPrompt(includeState) {
+  const today = todayISO();
+  const stateBlock = includeState
+    ? `\n\nMY CURRENT STATE (for you to UPDATE — preserve these ids, only mint new ids for net-new items):\n\`\`\`json\n${JSON.stringify(bundleExportObject(), null, 2)}\n\`\`\`\n`
+    : "";
+  return `You are helping me plan work I'll execute in Focus Deck (my task app). Output ONLY a JSON bundle in the exact schema below, inside a single \`\`\`json code block at the end of your reply.
+
+CONTEXT
+- Today: ${today}
+- I'll paste your output into Focus Deck's "Import bundle" textarea.
+- IDs are STABLE — they match on upsert. Matching IDs update fields in place; new IDs add new items; items not in the bundle are left untouched (no deletions).
+- Use this chat URL as a source link on every task so I can jump back: <PASTE YOUR CHAT URL HERE>
+
+SCHEMA
+{
+  "format": "focusdeck-bundle",
+  "version": 1,
+  "session": { "url": "<this chat URL>", "name": "<short description, optional>" },
+  "projects": [
+    { "id": "proj-<kebab-slug>", "name": "<name>", "color": "#7c5cff" }
+  ],
+  "tasks": [
+    {
+      "id": "task-<kebab-slug>",
+      "title": "<verb-first, short>",
+      "project": "<proj-id or 'inbox'>",
+      "tags": ["<tag>", "..."],
+      "priority": "high|med|low",
+      "due": "YYYY-MM-DD or null",
+      "followUp": "YYYY-MM-DD or null",
+      "energy": "deep|light",
+      "notes": "<context, decisions, gotchas — markdown OK>",
+      "someday": false,
+      "recurring": "daily|weekdays|weekly|monthly or null",
+      "subtasks": [
+        { "id": "sub-<slug>", "title": "<step>", "done": false }
+      ],
+      "attachments": [
+        { "kind": "link", "url": "https://...", "label": "<descriptive>" },
+        { "kind": "link", "url": "<this chat URL>", "label": "💬 Source chat" }
+      ]
+    }
+  ]
+}
+
+RULES
+1. STABLE IDS — kebab-case slugs (e.g. "task-draft-proposal", "sub-outline"). If updating an item I already have, REUSE its exact id; only mint new ids for net-new items.
+2. SOURCE LINK — every task MUST include a "💬 Source chat" link attachment pointing to this conversation, so I can click back to the context from Focus Deck.
+3. GRANULAR — break work into atomic subtasks (≤ 30 min each). Be liberal with the "notes" field: capture WHY, decisions made, links to docs/PRs/specs, edge cases, gotchas. Markdown is rendered.
+4. ASK FIRST — if anything is ambiguous (deadlines, dependencies, scope, who owns what), ASK ME CLARIFYING QUESTIONS before generating the bundle. Don't guess on dates or scope.
+5. DATES — ISO format YYYY-MM-DD only. Relative phrases like "next Tuesday" must be resolved to a real date. Today is ${today}.
+6. ONE CODE BLOCK — output the entire bundle in a single \`\`\`json ... \`\`\` block at the end. No commentary inside the block. Brief commentary above the block is OK.
+7. PRESERVE WORK — import is upsert-only. Don't list items you're not changing; omitting an item leaves it untouched in my app.
+8. PROJECT IDS — if I haven't given you an explicit project id, pick a clear slug (e.g. "proj-q2-launch") and define it in the projects array. Use "inbox" for unsorted/loose tasks.${stateBlock}
+
+WHAT I WANT TO PLAN:
+<fill in here — describe the goal, deadline, constraints, anything I've already decided. Paste relevant links. Tell me what's missing.>`;
+}
+
+function openAiBridge() {
+  document.getElementById("ai-import-text").value = "";
+  document.getElementById("ai-import-preview").innerHTML = "";
+  document.getElementById("ai-import-btn").disabled = true;
+  document.getElementById("ai-copy-feedback").textContent = "";
+  document.getElementById("ai-export-feedback").textContent = "";
+  document.getElementById("ai-include-state").checked = false;
+  renderAiPrompt();
+  document.getElementById("ai-bridge-modal").classList.add("show");
+}
+function closeAiBridge() { document.getElementById("ai-bridge-modal").classList.remove("show"); }
+function renderAiPrompt() {
+  const include = document.getElementById("ai-include-state").checked;
+  document.getElementById("ai-prompt-text").value = buildAiPrompt(include);
+}
+async function copyText(s) {
+  try { await navigator.clipboard.writeText(s); return true; }
+  catch { return false; }
+}
+
 /* ---------- timer ---------- */
 let timer = { remaining: 25*60, running: false, interval: null };
 function setTimer(min) { timer.remaining = min*60; timer.running = false; clearInterval(timer.interval); paintTimer(); }
@@ -2598,6 +2876,66 @@ document.getElementById("nc-save").onclick = () => {
 document.getElementById("send-add-file").onclick = () => {
   document.getElementById("send-file-input").click();
 };
+/* AI Bridge wiring */
+document.getElementById("ai-bridge-open").onclick = openAiBridge;
+document.getElementById("ai-bridge-close").onclick = closeAiBridge;
+document.getElementById("ai-bridge-modal").addEventListener("click", e => {
+  if (e.target.id === "ai-bridge-modal") closeAiBridge();
+});
+document.getElementById("ai-include-state").addEventListener("change", renderAiPrompt);
+document.getElementById("ai-copy-prompt").onclick = async () => {
+  const ok = await copyText(document.getElementById("ai-prompt-text").value);
+  document.getElementById("ai-copy-feedback").textContent = ok ? "Copied — paste into your AI session" : "Copy failed — select the text manually";
+  setTimeout(() => { document.getElementById("ai-copy-feedback").textContent = ""; }, 3500);
+};
+document.getElementById("ai-preview-btn").onclick = () => {
+  const txt = document.getElementById("ai-import-text").value.trim();
+  const out = document.getElementById("ai-import-preview");
+  const btn = document.getElementById("ai-import-btn");
+  if (!txt) { out.innerHTML = `<span class="muted">Paste a bundle first.</span>`; btn.disabled = true; return; }
+  try {
+    // Tolerate code fences if the user pastes ```json … ```
+    const cleaned = txt.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+    const bundle = JSON.parse(cleaned);
+    const p = bundlePreview(bundle);
+    out.innerHTML = `<span style="color: var(--accent);">Will add</span> <strong>${p.taskAdd}</strong> task${p.taskAdd===1?"":"s"}, <strong>${p.projAdd}</strong> project${p.projAdd===1?"":"s"}; <span style="color: var(--accent-2);">update</span> <strong>${p.taskUp}</strong> task${p.taskUp===1?"":"s"}, <strong>${p.projUp}</strong> project${p.projUp===1?"":"s"}. <span class="muted">Existing items not in the bundle are left alone.</span>`;
+    btn.disabled = false;
+    btn.dataset.bundle = cleaned;
+  } catch (e) {
+    out.innerHTML = `<span style="color: #fca5a5;">Couldn't parse: ${escapeHtml(e.message)}</span>`;
+    btn.disabled = true;
+  }
+};
+document.getElementById("ai-import-btn").onclick = () => {
+  const cleaned = document.getElementById("ai-import-btn").dataset.bundle;
+  if (!cleaned) return;
+  try {
+    const bundle = JSON.parse(cleaned);
+    const c = bundleImport(bundle);
+    save(); render();
+    document.getElementById("ai-import-preview").innerHTML =
+      `<span style="color: var(--accent);">✓ Imported</span> — added ${c.taskAdded} task${c.taskAdded===1?"":"s"} (${c.subAdded} subtasks, ${c.attAdded} new links), updated ${c.taskUpdated} task${c.taskUpdated===1?"":"s"}; added ${c.projAdded} project${c.projAdded===1?"":"s"}, updated ${c.projUpdated}.`;
+    document.getElementById("ai-import-btn").disabled = true;
+    document.getElementById("ai-import-text").value = "";
+    toast(`Imported ${c.taskAdded + c.taskUpdated} task${(c.taskAdded + c.taskUpdated)===1?"":"s"}`);
+  } catch (e) {
+    document.getElementById("ai-import-preview").innerHTML = `<span style="color: #fca5a5;">Import failed: ${escapeHtml(e.message)}</span>`;
+  }
+};
+document.getElementById("ai-copy-bundle").onclick = async () => {
+  const ok = await copyText(JSON.stringify(bundleExportObject(), null, 2));
+  document.getElementById("ai-export-feedback").textContent = ok ? "Copied — paste into your AI session" : "Copy failed";
+  setTimeout(() => { document.getElementById("ai-export-feedback").textContent = ""; }, 3500);
+};
+document.getElementById("ai-download-bundle").onclick = () => {
+  const blob = new Blob([JSON.stringify(bundleExportObject(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `focusdeck-bundle-${todayISO()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
 /* Bookmark import wiring */
 document.getElementById("import-bookmarks-btn").onclick = openBookmarkImport;
 document.getElementById("bm-cancel").onclick = () => document.getElementById("bookmarks-modal").classList.remove("show");
