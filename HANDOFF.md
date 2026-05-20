@@ -19,7 +19,7 @@ A self-contained single-file web app — **HTML + inline CSS + inline JS**. No b
 
 **Live URL:** https://avieisner-boop.github.io/Focus-deck/focusdeck.html
 **Repo:** https://github.com/avieisner-boop/Focus-deck (public, GitHub Pages enabled, Deploy from branch: `main`, root)
-**Source file:** `focusdeck.html` (formerly `Focusdeck.html` — uppercase version may still exist; safe to delete)
+**Source file:** `focusdeck.html` (lowercase — renamed from `Focusdeck.html` in v3)
 
 ## Features shipped (v2)
 
@@ -72,45 +72,45 @@ Click ▾ to expand. Each card supports:
 - **Export** writes a JSON backup
 - **Import** restores from JSON
 
+### Cross-device sync (v3, SHIPPED)
+- Set up in Settings → Cloud sync. Step-by-step walkthrough generates a GitHub Personal Access Token with `gist` scope and pastes it once.
+- App auto-creates a private GitHub Gist and syncs the whole state to it.
+- Triggers: on app open (pull), on window focus, on online event, every 5 min while focused, and 5s-debounced after any change.
+- Conflict strategy: last-write-wins via `state.updatedAt`. On first connect, if both this device and the cloud already have tasks, app asks which to keep.
+- Status badge in the topbar shows "Synced 2m ago" / "Sync error" / "Set up sync". Tap to sync now.
+- Token is base64-stored in localStorage (NOT real encryption — anyone with browser access can read it). Token is stripped before pushing to the gist; never lands in the cloud.
+- Per-device fields (`task.lastReminder`, `task.expanded`) are stripped from the gist payload so they don't follow you to other devices.
+- All sync code is inline in `focusdeck.html` — search for `GIST SYNC` section.
+
 ## What's NOT done yet (priorities for next session)
 
-### 1. Cross-device sync (TOP PRIORITY)
-Avi has multiple devices (iPhone + laptop). Current state: each device has its own `localStorage` — no sync. Manual export/import to iCloud Drive works but is friction.
-
-**Recommended approach: GitHub Gist auto-sync (Option B from chat)**
-- User creates a Personal Access Token with `gist` scope
-- Paste token into Settings → saved encrypted in localStorage
-- App polls / pushes to a single private gist on:
-  - Page load
-  - After every change (debounced ~5 sec)
-  - On window focus
-  - Manual "Sync now" button
-- Conflict strategy: last-write-wins with a "last synced" timestamp shown in UI
-- ~60-100 lines of code added to existing single file
-
-**Alt (more effort, better UX):** Supabase free tier — real-time sync, files in cloud not localStorage, requires sign-in flow.
-
-### 2. PWA polish
+### 1. PWA polish
 - Already works via "Add to Home Screen"
 - Could add a proper manifest + service worker for offline + nicer icon
 - Icon currently inlined as SVG favicon
 
-### 3. Smarter today view
+### 2. Smarter today view
 - Suggest task to start based on energy check-in + priority + due date
 - "Next action" card pinned at top
 
-### 4. Better mobile expand UX
+### 3. Better mobile expand UX
 - Tap-anywhere-on-card to expand (currently tap the ▾ button)
 - Swipe gestures: swipe right to complete, left to snooze
 
-### 5. Recurring task improvements
+### 4. Recurring task improvements
 - Custom intervals (every 3 days, every 2nd Tuesday)
 - Skip without breaking the streak
 
-### 6. Reminders via push notifications
+### 5. Reminders via push notifications
 - Currently: in-browser Notification API only fires while a tab is open
 - For real reminders: requires push API + service worker + ideally a backend
 - Workaround: lean on Google Calendar links for time-based reminders
+
+### 6. Sync improvements (nice-to-have)
+- Real encryption of the token at rest (currently base64 only — not real security)
+- Merge strategy instead of last-write-wins (e.g., per-task last-modified, dedupe by id)
+- Show "Cloud has newer changes — refresh?" banner instead of silently pulling
+- Multi-user gists (share a gist with a partner)
 
 ## Tech notes
 
@@ -119,9 +119,9 @@ Avi has multiple devices (iPhone + laptop). Current state: each device has its o
 - Storage key: `focusdeck.v1` in `localStorage`
 - Theme persists across sessions
 - File attachments stored as base64 data URLs → eats localStorage fast for big files
-- Total file ~1400 lines; readable, commented at section breaks
+- Total file ~1770 lines; readable, commented at section breaks
 - All external links open in new tab with `noopener`
-- No analytics, no telemetry, no network calls except user-clicked links
+- No analytics, no telemetry, no network calls except: (a) user-clicked links and (b) GitHub Gist API calls when cloud sync is enabled (api.github.com)
 
 ## Deployment
 
@@ -137,6 +137,8 @@ Avi has multiple devices (iPhone + laptop). Current state: each device has its o
 - **Why not Notion / Todoist / TickTick?** Avi wanted *his* tool with *his* energy check-in and *his* remote-tool launcher; existing apps don't combine these.
 - **Capture syntax vs forms?** Syntax is faster for ADHD brain dumps. Forms slow you down.
 - **Today view includes no-date tasks** (changed in v2 mobile fix) — because users expect "I just typed it, it should be visible."
+- **Why Gist for sync (not Supabase/Firebase)?** Avi already has a GitHub account. Zero new signups. Each user owns their own gist with their own GitHub credentials — no shared backend to maintain.
+- **Why last-write-wins, not merge?** Solo user with 2-3 devices, rarely simultaneous edits. Merge is much more code for a small benefit. The "first connect" flow asks which side wins when there's actual conflict.
 
 ## Files in repo
 
@@ -144,8 +146,7 @@ Avi has multiple devices (iPhone + laptop). Current state: each device has its o
 Focus-deck/
 ├── README.md           # public-facing description
 ├── HANDOFF.md          # this file
-├── focusdeck.html      # the app (v2, mobile-fixed)
-└── Focusdeck.html      # OLD v1, safe to delete
+└── focusdeck.html      # the app (v3 — adds cross-device Gist sync)
 ```
 
 ---
@@ -156,25 +157,22 @@ Copy-paste this into a new Claude Code session opened on the `avieisner-boop/Foc
 
 ```
 I'm continuing work on Focus Deck — an ADHD-friendly daily command center I
-built in an earlier Claude session. The app is a single HTML file
+built in earlier Claude sessions. The app is a single HTML file
 (focusdeck.html) at the repo root, deployed live via GitHub Pages at
 https://avieisner-boop.github.io/Focus-deck/focusdeck.html.
 
 Please start by reading HANDOFF.md — it captures what's built, decisions
-made, and what to tackle next.
+made, and what to tackle next. Cross-device GitHub Gist sync is shipped
+(v3); pick the next item from the "What's NOT done yet" list, or use
+whatever I ask for next.
 
-Top priority: add automatic cross-device sync via GitHub Gist (Option B from
-the handoff). I have ADHD, so:
-- Make the setup walkthrough step-by-step with screenshots/clear directions
-- Default to "just work" once a token is pasted
+I have ADHD, so:
+- Default to "just work" — make sensible choices instead of asking me
+- Step-by-step instructions whenever I need to do something
 - Don't ask me questions you can answer yourself
 
-I'm on iPhone most of the time. When you push changes, they go live on the
-URL above automatically. Please commit small, descriptive changes so I can
-see what shipped.
-
-Also feel free to delete the old Focusdeck.html (capital F) if it still
-exists — it's the v1 with the mobile bug.
+I'm on iPhone most of the time. Push changes directly to main — GitHub
+Pages auto-deploys. Commit in small, descriptive chunks.
 ```
 
 ## Open file in the new session
