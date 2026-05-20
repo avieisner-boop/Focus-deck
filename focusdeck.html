@@ -210,10 +210,24 @@
   /* Modal */
   .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.55); display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
   .modal-backdrop.show { display: flex; }
-  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; max-width: 520px; width: 100%; padding: 18px; box-shadow: var(--shadow); }
+  .modal { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; max-width: 520px; width: 100%; padding: 18px; box-shadow: var(--shadow); max-height: calc(100vh - 32px); overflow-y: auto; }
   .modal h3 { margin-top: 0; }
   .row { display: flex; gap: 8px; }
   .row > * { flex: 1; }
+
+  /* Sync status badge */
+  #sync-status {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 10px; border-radius: 8px; cursor: pointer; user-select: none;
+    border: 1px solid var(--line); background: var(--panel-2);
+    font-size: 11px; color: var(--muted); white-space: nowrap;
+  }
+  #sync-status:hover { border-color: var(--accent); color: var(--text); }
+  #sync-status[data-state="off"] { color: var(--accent); border-color: rgba(124,92,255,.35); }
+  #sync-status[data-state="busy"] { color: var(--accent-2); }
+  #sync-status[data-state="error"] { color: #fca5a5; border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
+  #sync-status[data-state="ok"] { color: #86efac; border-color: rgba(34,197,94,.25); }
+  @media (max-width: 760px) { #sync-status { padding: 3px 8px; font-size: 10px; } }
 
   /* Empty */
   .empty { padding: 30px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: var(--radius); }
@@ -294,6 +308,7 @@
       <button class="btn menu-btn" id="menu-btn" aria-label="Menu">☰</button>
       <h1 id="view-title">Today</h1>
       <span class="muted small" id="view-sub"></span>
+      <span id="sync-status" data-state="off" title="Cloud sync"></span>
       <div class="spacer"></div>
       <input class="search" id="search" placeholder="Search tasks, tags, notes…   (press / to focus)" />
       <button class="btn" id="focus-btn" title="Start focus session">🎯 Focus</button>
@@ -386,6 +401,9 @@
 <div class="modal-backdrop" id="settings-modal">
   <div class="modal">
     <h3>Settings</h3>
+    <div class="field-row"><label>Cloud sync</label>
+      <div id="sync-section"></div>
+    </div>
     <div class="field-row"><label>Notifications</label>
       <div>
         <button class="btn small" id="req-notify">Enable browser reminders</button>
@@ -444,7 +462,9 @@ const DEFAULTS = {
     moodDate: null,
     lastCompletedDate: null,
     streak: 0,
+    sync: { tokenEnc: null, gistId: null, lastSyncedAt: null, lastError: null },
   },
+  updatedAt: null,
 };
 
 let state = load();
@@ -454,20 +474,27 @@ function load() {
     const raw = localStorage.getItem(STORE_KEY);
     if (!raw) return structuredClone(DEFAULTS);
     const parsed = JSON.parse(raw);
-    return Object.assign(structuredClone(DEFAULTS), parsed, {
+    const merged = Object.assign(structuredClone(DEFAULTS), parsed, {
       settings: Object.assign({}, DEFAULTS.settings, parsed.settings || {}),
     });
+    merged.settings.sync = Object.assign({}, DEFAULTS.settings.sync, (parsed.settings && parsed.settings.sync) || {});
+    return merged;
   } catch (e) {
     console.warn("Load failed, resetting:", e);
     return structuredClone(DEFAULTS);
   }
 }
-function save() {
+function saveLocal() {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); }
   catch (e) {
     alert("Storage is full. Try exporting a backup and deleting large attachments.");
     console.error(e);
   }
+}
+function save() {
+  state.updatedAt = Date.now();
+  saveLocal();
+  schedulePush();
 }
 
 /* ---------- helpers ---------- */
@@ -541,6 +568,7 @@ function render() {
   renderMood();
   updateCounts();
   updateStreakUI();
+  if (typeof _syncStatusEl === "function") _syncStatusEl();
   document.body.dataset.theme = state.settings.theme === "light" ? "light" : "dark";
 }
 
@@ -1226,6 +1254,7 @@ function notify(title, body) {
 function checkDueReminders() {
   if (!("Notification" in window) || Notification.permission !== "granted") return;
   const now = Date.now();
+  let touched = false;
   state.tasks.forEach(t => {
     if (t.done || !t.due) return;
     if (t.lastReminder && now - t.lastReminder < 1000*60*60*6) return;
@@ -1234,12 +1263,15 @@ function checkDueReminders() {
     if (due === today.getTime()) {
       notify("📅 Due today", t.title);
       t.lastReminder = now;
+      touched = true;
     } else if (due < today.getTime()) {
       notify("⚠ Overdue", t.title);
       t.lastReminder = now;
+      touched = true;
     }
   });
-  save();
+  // lastReminder is per-device anti-spam, don't sync it across devices
+  if (touched) saveLocal();
 }
 
 /* ---------- utilities ---------- */
@@ -1255,6 +1287,378 @@ function toast(msg) {
   }
   el.textContent = msg; el.style.display = "block";
   clearTimeout(el._t); el._t = setTimeout(()=> el.style.display="none", 2200);
+}
+
+/* ===========================================================
+   GIST SYNC — cross-device sync via a private GitHub Gist
+   - User pastes a Personal Access Token with `gist` scope
+   - State pushed/pulled from a single auto-managed private gist
+   - Last-write-wins via state.updatedAt
+   - Token never leaves this device (stripped before push)
+   =========================================================== */
+const SYNC_FILE = "focusdeck-state.json";
+const SYNC_DESC = "Focus Deck — cross-device sync (do not delete)";
+let _syncDebounce = null;
+let _syncBusy = false;
+
+function _obfToken(s) { try { return s ? btoa(unescape(encodeURIComponent(s))) : null; } catch { return null; } }
+function _deobfToken(s) { try { return s ? decodeURIComponent(escape(atob(s))) : null; } catch { return null; } }
+function getSyncToken() { return _deobfToken(state.settings.sync && state.settings.sync.tokenEnc); }
+function setSyncToken(t) {
+  state.settings.sync = state.settings.sync || { gistId: null, lastSyncedAt: null, lastError: null };
+  state.settings.sync.tokenEnc = t ? _obfToken(t) : null;
+  state.settings.sync.lastError = null;
+  saveLocal();
+}
+
+function schedulePush() {
+  if (!getSyncToken()) return;
+  clearTimeout(_syncDebounce);
+  _syncDebounce = setTimeout(() => { syncPush().catch(_syncFail); }, 5000);
+}
+
+async function _gh(path, opts) {
+  const token = getSyncToken();
+  if (!token) throw new Error("No sync token");
+  opts = opts || {};
+  const r = await fetch("https://api.github.com" + path, {
+    method: opts.method || "GET",
+    headers: Object.assign({
+      "Authorization": "Bearer " + token,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    }, opts.headers || {}),
+    body: opts.body,
+  });
+  if (!r.ok) {
+    const txt = await r.text().catch(() => "");
+    if (r.status === 401) throw new Error("Bad token. Generate a new one with the `gist` scope.");
+    if (r.status === 403) throw new Error("Token rejected — does it have the `gist` scope?");
+    throw new Error("GitHub API " + r.status + ": " + txt.slice(0, 160));
+  }
+  return r.json();
+}
+
+function _stateForGist() {
+  const copy = JSON.parse(JSON.stringify(state));
+  if (copy.settings) delete copy.settings.sync;
+  // Per-device fields — strip so they don't follow you to other devices
+  (copy.tasks || []).forEach(t => { delete t.lastReminder; delete t.expanded; });
+  return copy;
+}
+
+async function _findExistingGist() {
+  for (let p = 1; p <= 4; p++) {
+    const list = await _gh("/gists?per_page=100&page=" + p);
+    const hit = list.find(g => g.files && g.files[SYNC_FILE]);
+    if (hit) return hit;
+    if (list.length < 100) break;
+  }
+  return null;
+}
+
+async function _readGistContent(gist) {
+  const file = gist.files && gist.files[SYNC_FILE];
+  if (!file) return null;
+  let content = file.content;
+  if (file.truncated && file.raw_url) {
+    content = await (await fetch(file.raw_url)).text();
+  }
+  try { return JSON.parse(content); }
+  catch { return null; }
+}
+
+async function _createGist() {
+  const g = await _gh("/gists", {
+    method: "POST",
+    body: JSON.stringify({
+      description: SYNC_DESC,
+      public: false,
+      files: { [SYNC_FILE]: { content: JSON.stringify(_stateForGist(), null, 2) } },
+    }),
+  });
+  state.settings.sync.gistId = g.id;
+  saveLocal();
+  return g.id;
+}
+
+async function _ensureGistId() {
+  const sync = state.settings.sync || {};
+  if (sync.gistId) {
+    try {
+      await _gh("/gists/" + sync.gistId);
+      return sync.gistId;
+    } catch (e) {
+      if (!/\b404\b/.test(e.message)) throw e;
+      sync.gistId = null;
+    }
+  }
+  const existing = await _findExistingGist();
+  if (existing) {
+    state.settings.sync.gistId = existing.id;
+    saveLocal();
+    return existing.id;
+  }
+  return _createGist();
+}
+
+async function syncPush() {
+  if (_syncBusy || !getSyncToken()) return;
+  _syncBusy = true;
+  _syncStatusEl("Syncing…");
+  try {
+    const id = await _ensureGistId();
+    await _gh("/gists/" + id, {
+      method: "PATCH",
+      body: JSON.stringify({
+        files: { [SYNC_FILE]: { content: JSON.stringify(_stateForGist(), null, 2) } },
+      }),
+    });
+    state.settings.sync.lastSyncedAt = Date.now();
+    state.settings.sync.lastError = null;
+    saveLocal();
+    _syncStatusEl();
+  } catch (e) {
+    _syncFail(e);
+    throw e;
+  } finally {
+    _syncBusy = false;
+  }
+}
+
+async function syncPull() {
+  if (_syncBusy || !getSyncToken()) return;
+  _syncBusy = true;
+  _syncStatusEl("Syncing…");
+  try {
+    const sync = state.settings.sync || {};
+    let gistId = sync.gistId;
+    if (!gistId) {
+      const existing = await _findExistingGist();
+      if (!existing) {
+        _syncBusy = false;
+        return syncPush();
+      }
+      state.settings.sync.gistId = existing.id;
+      gistId = existing.id;
+    }
+    const gist = await _gh("/gists/" + gistId);
+    const remote = await _readGistContent(gist);
+    if (!remote) {
+      _syncBusy = false;
+      return syncPush();
+    }
+    const remoteAt = remote.updatedAt || 0;
+    const localAt = state.updatedAt || 0;
+    if (remoteAt > localAt) {
+      _applyRemote(remote);
+    } else if (localAt > remoteAt) {
+      _syncBusy = false;
+      return syncPush();
+    }
+    state.settings.sync.lastSyncedAt = Date.now();
+    state.settings.sync.lastError = null;
+    saveLocal();
+    _syncStatusEl();
+  } catch (e) {
+    _syncFail(e);
+  } finally {
+    _syncBusy = false;
+  }
+}
+
+function _applyRemote(remote) {
+  const localSync = state.settings.sync;
+  state = Object.assign(structuredClone(DEFAULTS), remote, {
+    settings: Object.assign({}, DEFAULTS.settings, remote.settings || {}, { sync: localSync }),
+  });
+  saveLocal();
+  render();
+}
+
+async function syncConnect(token) {
+  setSyncToken(token);
+  _syncStatusEl("Connecting…");
+  try {
+    const existing = await _findExistingGist();
+    if (!existing) {
+      await _createGist();
+      _syncStatusEl();
+      return { result: "created" };
+    }
+    state.settings.sync.gistId = existing.id;
+    const remote = await _readGistContent(existing);
+    const hasLocal = (state.tasks || []).length > 0;
+    const hasRemote = remote && (remote.tasks || []).length > 0;
+    if (hasLocal && hasRemote) {
+      const useCloud = confirm(
+        "Found existing cloud data.\n\n" +
+        "Cloud has " + remote.tasks.length + " task(s).\n" +
+        "This device has " + state.tasks.length + " task(s).\n\n" +
+        "OK = Use cloud (replace this device's tasks)\n" +
+        "Cancel = Keep this device's tasks (overwrite cloud)"
+      );
+      if (!useCloud) {
+        await syncPush();
+        return { result: "pushed-over-conflict" };
+      }
+    }
+    if (remote) _applyRemote(remote);
+    state.settings.sync.lastSyncedAt = Date.now();
+    state.settings.sync.lastError = null;
+    saveLocal();
+    _syncStatusEl();
+    return { result: "pulled" };
+  } catch (e) {
+    setSyncToken(null);
+    state.settings.sync.lastError = e.message || String(e);
+    saveLocal();
+    _syncStatusEl();
+    throw e;
+  }
+}
+
+function syncDisconnect() {
+  setSyncToken(null);
+  _syncStatusEl();
+}
+
+function _syncFail(e) {
+  console.error("Sync failed:", e);
+  state.settings.sync = state.settings.sync || {};
+  state.settings.sync.lastError = e && e.message ? e.message : String(e);
+  saveLocal();
+  _syncStatusEl();
+}
+
+function _fmtAgo(ts) {
+  if (!ts) return "never";
+  const s = Math.max(0, Math.round((Date.now() - ts) / 1000));
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.round(s/60) + "m ago";
+  if (s < 86400) return Math.round(s/3600) + "h ago";
+  return Math.round(s/86400) + "d ago";
+}
+
+function _syncStatusEl(transient) {
+  const el = document.getElementById("sync-status");
+  if (!el) return;
+  const sync = (state.settings && state.settings.sync) || {};
+  const has = !!getSyncToken();
+  if (!has) {
+    el.textContent = "☁ Set up sync";
+    el.title = "Open Settings to set up cross-device sync";
+    el.dataset.state = "off";
+    return;
+  }
+  if (transient) {
+    el.textContent = "☁ " + transient;
+    el.title = transient;
+    el.dataset.state = "busy";
+    return;
+  }
+  if (sync.lastError) {
+    el.textContent = "⚠ Sync error";
+    el.title = sync.lastError + " — tap to retry";
+    el.dataset.state = "error";
+    return;
+  }
+  if (sync.lastSyncedAt) {
+    el.textContent = "☁ Synced " + _fmtAgo(sync.lastSyncedAt);
+    el.title = "Tap to sync now";
+    el.dataset.state = "ok";
+    return;
+  }
+  el.textContent = "☁ Not synced yet";
+  el.title = "Tap to sync now";
+  el.dataset.state = "ok";
+}
+
+function renderSyncSection() {
+  const el = document.getElementById("sync-section");
+  if (!el) return;
+  const sync = (state.settings && state.settings.sync) || {};
+  const hasToken = !!getSyncToken();
+
+  if (!hasToken) {
+    el.innerHTML = `
+      <div class="small muted" style="margin-bottom: 10px; line-height: 1.5;">
+        Sync your tasks across iPhone, laptop, and any browser — using a private GitHub Gist as cloud storage. Free, no extra signup.
+      </div>
+      <details open style="margin-bottom: 10px;">
+        <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">Step-by-step setup (≈2 min)</summary>
+        <ol style="margin: 10px 0; padding-left: 22px; line-height: 1.7; font-size: 13px;">
+          <li>Tap <a href="https://github.com/settings/tokens/new?description=Focus%20Deck%20sync&amp;scopes=gist" target="_blank" rel="noopener" style="color: var(--accent-2);">GitHub → Generate new token</a> (sign in if asked)</li>
+          <li>Confirm <strong>Note</strong> says "Focus Deck sync"</li>
+          <li>Set <strong>Expiration</strong> to "No expiration" (or 1 year)</li>
+          <li>Confirm only the <strong>gist</strong> checkbox is ticked — leave everything else unchecked</li>
+          <li>Scroll down, tap <strong>Generate token</strong></li>
+          <li>Copy the token (starts with <code>ghp_</code> or <code>github_pat_</code>)</li>
+          <li>Paste it below, tap <strong>Connect</strong> — done</li>
+        </ol>
+      </details>
+      <div class="row">
+        <input id="sync-token-input" type="password" placeholder="Paste your token here" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" />
+        <button class="btn primary" id="sync-connect">Connect</button>
+      </div>
+      <div class="small muted" style="margin-top: 8px; line-height: 1.5;">
+        Your token stays only on this device (saved in this browser). Its one permission is creating &amp; updating gists — nothing else on your GitHub account is touched.
+      </div>
+      ${sync.lastError ? `<div class="small" style="margin-top: 8px; color: var(--danger);">Last error: ${escapeHtml(sync.lastError)}</div>` : ""}
+    `;
+    el.querySelector("#sync-connect").onclick = async () => {
+      const inp = el.querySelector("#sync-token-input");
+      const btn = el.querySelector("#sync-connect");
+      const token = inp.value.trim();
+      if (!token) return toast("Paste your token first");
+      btn.disabled = true;
+      btn.textContent = "Connecting…";
+      try {
+        const res = await syncConnect(token);
+        toast(res.result === "created" ? "Cloud sync set up. Pushed your tasks." :
+              res.result === "pulled" ? "Connected. Pulled cloud tasks." :
+              "Connected. Pushed this device's tasks.");
+        renderSyncSection();
+      } catch (e) {
+        alert("Couldn't connect:\n\n" + (e.message || e));
+        renderSyncSection();
+      }
+    };
+    el.querySelector("#sync-token-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") el.querySelector("#sync-connect").click();
+    });
+  } else {
+    const status = sync.lastError
+      ? `<span style="color: var(--danger);">⚠ ${escapeHtml(sync.lastError)}</span>`
+      : sync.lastSyncedAt
+        ? `Last synced ${_fmtAgo(sync.lastSyncedAt)}`
+        : "Not synced yet";
+    el.innerHTML = `
+      <div class="small" style="margin-bottom: 6px;">
+        <strong style="color: var(--ok);">✓ Connected.</strong> ${status}
+      </div>
+      ${sync.gistId ? `<div class="small muted" style="margin-bottom: 10px;">Cloud gist: <a href="https://gist.github.com/${escapeAttr(sync.gistId)}" target="_blank" rel="noopener" style="color: var(--accent-2);">view on GitHub</a></div>` : ""}
+      <div class="row-gap">
+        <button class="btn small" id="sync-now">↻ Sync now</button>
+        <button class="btn small danger" id="sync-disconnect">Remove token</button>
+      </div>
+      <div class="small muted" style="margin-top: 8px; line-height: 1.5;">
+        Auto-syncs on every change (after a short pause), when the app opens, and when you switch back to this tab.
+      </div>
+    `;
+    el.querySelector("#sync-now").onclick = async () => {
+      const btn = el.querySelector("#sync-now");
+      btn.disabled = true;
+      btn.textContent = "Syncing…";
+      try { await syncPull(); } catch {}
+      renderSyncSection();
+    };
+    el.querySelector("#sync-disconnect").onclick = () => {
+      if (!confirm("Remove the sync token from this device?\n\nYour cloud gist stays on GitHub and other devices keep syncing. You can reconnect later by pasting the token again.")) return;
+      syncDisconnect();
+      renderSyncSection();
+    };
+  }
 }
 
 /* ---------- wiring ---------- */
@@ -1296,9 +1700,27 @@ document.getElementById("cl-add").onclick = () => {
   save(); render();
 };
 
-document.getElementById("settings-btn").onclick = () => document.getElementById("settings-modal").classList.add("show");
+function openSettings() {
+  document.getElementById("settings-modal").classList.add("show");
+  renderSyncSection();
+}
+document.getElementById("settings-btn").onclick = openSettings;
 document.getElementById("settings-close").onclick = () => document.getElementById("settings-modal").classList.remove("show");
 document.getElementById("settings-modal").addEventListener("click", e => { if (e.target.id === "settings-modal") e.currentTarget.classList.remove("show"); });
+
+/* Sync wiring */
+document.getElementById("sync-status").onclick = () => {
+  if (!getSyncToken()) {
+    openSettings();
+    setTimeout(() => { const el = document.getElementById("sync-token-input"); if (el) el.focus(); }, 50);
+  } else {
+    syncPull().catch(_syncFail);
+  }
+};
+window.addEventListener("focus", () => { if (getSyncToken() && !_syncBusy) syncPull().catch(_syncFail); });
+window.addEventListener("online", () => { if (getSyncToken() && !_syncBusy) syncPull().catch(_syncFail); });
+setInterval(() => _syncStatusEl(), 30 * 1000);
+setInterval(() => { if (getSyncToken() && document.hasFocus() && !_syncBusy) syncPull().catch(_syncFail); }, 5 * 60 * 1000);
 document.getElementById("default-focus").addEventListener("change", e => { state.settings.defaultFocus = +e.target.value; save(); });
 document.getElementById("show-done").addEventListener("change", e => { state.settings.showDone = e.target.value; save(); render(); });
 document.getElementById("req-notify").onclick = async () => {
@@ -1322,6 +1744,7 @@ if ("Notification" in window) document.getElementById("notify-status").textConte
 /* Roll forward routines that completed yesterday or earlier */
 (function rollRoutines() {
   const today = todayISO();
+  let changed = false;
   state.tasks.forEach(t => {
     if (t.recurring && t.done && t.completedAt) {
       const last = new Date(t.completedAt).toISOString().slice(0,10);
@@ -1329,18 +1752,23 @@ if ("Notification" in window) document.getElementById("notify-status").textConte
         const next = nextRecurringDate(t.recurring, last);
         if (next <= today) {
           const exists = state.tasks.some(x => x.recurring === t.recurring && x.title === t.title && !x.done && x.due === next);
-          if (!exists) spawnRecurring(t);
+          if (!exists) { spawnRecurring(t); changed = true; }
         }
       }
     }
   });
-  save();
+  if (changed) save();
 })();
 
 resetTimer();
 render();
 setInterval(checkDueReminders, 1000 * 60 * 5);
 checkDueReminders();
+
+/* Initial cloud sync on startup */
+if (getSyncToken()) {
+  syncPull().catch(_syncFail);
+}
 
 </script>
 </body>
