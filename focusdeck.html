@@ -419,6 +419,102 @@
   }
   .capture-banner .x { margin-left: auto; cursor: pointer; color: var(--muted); }
 
+  /* Daily plan ritual — opens once per day, gates the app */
+  .daily-plan {
+    position: fixed; inset: 0; z-index: 95;
+    background: radial-gradient(ellipse at top, #1a1530 0%, var(--bg) 70%);
+    display: none; flex-direction: column;
+    overflow-y: auto;
+  }
+  .daily-plan.show { display: flex; }
+  .daily-plan .dp-wrap {
+    max-width: 640px; width: 100%; margin: 0 auto; padding: 24px 20px 40px;
+  }
+  .daily-plan .dp-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .daily-plan .dp-greeting {
+    font-size: 14px; color: var(--muted); margin-bottom: 4px;
+  }
+  .daily-plan .dp-title {
+    font-size: 26px; font-weight: 700; letter-spacing: -.02em;
+    line-height: 1.2; margin-bottom: 18px;
+  }
+  .daily-plan .dp-step {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 16px; margin-bottom: 12px;
+  }
+  .daily-plan .dp-step-label {
+    font-size: 12px; color: var(--muted); text-transform: uppercase;
+    letter-spacing: .08em; font-weight: 600; margin-bottom: 8px;
+  }
+  .daily-plan .dp-step-q { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  .daily-plan .energy-row { display: flex; gap: 8px; flex-wrap: wrap; }
+  .daily-plan .energy-row button {
+    flex: 1; min-width: 110px; background: var(--panel-2);
+    border: 1px solid var(--line); color: var(--text);
+    padding: 12px 8px; border-radius: var(--r-md); cursor: pointer;
+    font-size: 13px; font-weight: 500;
+  }
+  .daily-plan .energy-row button:hover { border-color: var(--accent); }
+  .daily-plan .energy-row button.active {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+  }
+  .daily-plan .carry-row {
+    display: flex; gap: 8px; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid var(--line-soft); font-size: 13px;
+  }
+  .daily-plan .carry-row:last-child { border-bottom: 0; }
+  .daily-plan .carry-row .carry-title {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap; color: var(--text);
+  }
+  .daily-plan .carry-row .carry-actions { display: flex; gap: 4px; }
+  .daily-plan .carry-row .carry-actions button {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer;
+  }
+  .daily-plan .carry-row .carry-actions button:hover { border-color: var(--accent); }
+  .daily-plan .carry-row.applied {
+    opacity: .5;
+  }
+  .daily-plan .top3-row {
+    display: flex; gap: 10px; align-items: center; padding: 8px 0;
+    border-bottom: 1px solid var(--line-soft); font-size: 13px; cursor: pointer;
+  }
+  .daily-plan .top3-row:last-child { border-bottom: 0; }
+  .daily-plan .top3-row .check {
+    width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    color: var(--accent); font-weight: bold;
+  }
+  .daily-plan .top3-row.picked .check {
+    background: var(--accent); border-color: var(--accent); color: white;
+  }
+  .daily-plan .top3-row .top3-title {
+    flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .daily-plan .dp-go {
+    background: linear-gradient(135deg, #7c5cff, #5cc8ff); color: white; border: 0;
+    padding: 14px 32px; border-radius: 999px; font-size: 16px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(124,92,255,.3);
+    width: 100%; max-width: 320px; margin: 18px auto 0; display: block;
+  }
+  .daily-plan .dp-go:hover { transform: translateY(-1px); }
+  .daily-plan .dp-go:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+  .daily-plan .dp-snooze {
+    background: transparent; border: 1px solid var(--line); color: var(--muted);
+    padding: 6px 12px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  }
+  .daily-plan .dp-snooze:hover { border-color: var(--accent); color: var(--text); }
+  .daily-plan input.dp-intention {
+    width: 100%; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 10px 12px; color: var(--text); font-size: 14px;
+  }
+  .daily-plan .dp-summary { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
   /* Right rail */
   .card {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
@@ -564,6 +660,7 @@
     <div class="nav-section">
       <div class="nav-title">Tools</div>
       <div class="row-gap">
+        <button class="btn small" id="nav-daily-plan" title="Reopen today's plan">🌅 Daily plan</button>
         <button class="btn small" id="nav-ai-bridge" title="Plan with AI, sync back">🤖 AI Bridge</button>
         <button class="btn small" id="nav-siri" title="Set up iPhone capture">📱 Siri capture</button>
       </div>
@@ -613,6 +710,45 @@
     <div id="capture-banner-host"></div>
     <div id="task-area"></div>
   </main>
+
+  <!-- Daily Plan Ritual — gates the app on first open each day -->
+  <div class="daily-plan" id="daily-plan">
+    <div class="dp-wrap">
+      <div class="dp-header">
+        <div>
+          <div class="dp-greeting" id="dp-greeting">Good morning</div>
+          <div class="dp-title">Three quick decisions, then you're in.</div>
+        </div>
+        <button class="dp-snooze" id="dp-snooze" title="Skip today's plan — won't ask again until tomorrow">😴 Snooze today</button>
+      </div>
+
+      <div class="dp-step">
+        <div class="dp-step-label">Step 1 of 3</div>
+        <div class="dp-step-q">⚡ How's your energy?</div>
+        <div class="energy-row" id="dp-energy"></div>
+      </div>
+
+      <div class="dp-step" id="dp-carry-host">
+        <div class="dp-step-label">Step 2 of 3</div>
+        <div class="dp-step-q" id="dp-carry-q">📋 Carry-forward from yesterday</div>
+        <div id="dp-carry-list"></div>
+      </div>
+
+      <div class="dp-step">
+        <div class="dp-step-label">Step 3 of 3</div>
+        <div class="dp-step-q">🎯 Pick today's top 3 <span class="dp-summary" id="dp-top3-count">(0 / 3)</span></div>
+        <div id="dp-top3-list"></div>
+      </div>
+
+      <div class="dp-step">
+        <div class="dp-step-label">Optional</div>
+        <div class="dp-step-q">💭 Today's intention</div>
+        <input class="dp-intention" id="dp-intention" placeholder="Today is for…" maxlength="120" />
+      </div>
+
+      <button class="dp-go" id="dp-go">Start the day →</button>
+    </div>
+  </div>
 
   <!-- Single-task Focus Mode (full-screen, mobile-friendly) -->
   <div class="focus-mode" id="focus-mode">
@@ -751,6 +887,14 @@
         <label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer;">
           <input type="checkbox" id="setting-commsbump" style="width:auto;" />
           <span>Surface ⏳ "waiting reply" tasks when their follow-up date arrives</span>
+        </label>
+      </div>
+    </div>
+    <div class="field-row"><label>Daily plan</label>
+      <div>
+        <label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="setting-dailyplan" style="width:auto;" />
+          <span>Show the 3-decision ritual on first open each day (one snooze per day still applies)</span>
         </label>
       </div>
     </div>
@@ -1041,6 +1185,11 @@ const DEFAULTS = {
     lastAutoRollDate: null,
     dailyEnergy: null,
     dailyEnergyDate: null,
+    lastDailyPlanDate: null,
+    dailyPlanSnoozedDate: null,
+    dailyPlanEnabled: true,
+    dailyIntention: null,
+    dailyIntentionDate: null,
     sync: { tokenEnc: null, gistId: null, lastSyncedAt: null, lastError: null },
   },
   updatedAt: null,
@@ -2690,6 +2839,182 @@ function runDailySweeps() {
 }
 
 /* ===========================================================
+   DAILY PLAN RITUAL — 3 quick decisions before app opens
+   Triggers on first open of each local day. One snooze per day.
+   =========================================================== */
+let _dpTop3 = new Set();
+let _dpCarryDecisions = {};
+
+function shouldShowDailyPlan() {
+  if (!state.settings.dailyPlanEnabled) return false;
+  const today = todayISO();
+  if (state.settings.lastDailyPlanDate === today) return false;
+  if (state.settings.dailyPlanSnoozedDate === today) return false;
+  if (location.hash && location.hash.includes("capture=")) return false;
+  if (!state.tasks || state.tasks.length === 0) return false;
+  return true;
+}
+
+function openDailyPlan() {
+  _dpTop3 = new Set(state.tasks.filter(t => t.focus && !t.done).map(t => t.id).slice(0, 3));
+  _dpCarryDecisions = {};
+  document.getElementById("dp-intention").value =
+    (state.settings.dailyIntentionDate === todayISO() ? state.settings.dailyIntention : "") || "";
+  renderDailyPlan();
+  document.getElementById("daily-plan").classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+
+function closeDailyPlan() {
+  document.getElementById("daily-plan").classList.remove("show");
+  document.body.style.overflow = "";
+}
+
+function snoozeDailyPlan() {
+  state.settings.dailyPlanSnoozedDate = todayISO();
+  save();
+  closeDailyPlan();
+  toast("Daily plan snoozed — back tomorrow.");
+}
+
+function startDailyPlan() {
+  const today = todayISO();
+  // Persist energy already set in real-time via clicks; persist intention now
+  const intention = document.getElementById("dp-intention").value.trim();
+  if (intention) {
+    state.settings.dailyIntention = intention;
+    state.settings.dailyIntentionDate = today;
+  } else {
+    state.settings.dailyIntention = null;
+  }
+  // Apply carry decisions
+  Object.entries(_dpCarryDecisions).forEach(([taskId, decision]) => {
+    const t = state.tasks.find(x => x.id === taskId);
+    if (!t) return;
+    if (decision === "today") { t.due = today; t.carryDays = 0; }
+    else if (decision === "tomorrow") {
+      const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() + 1);
+      t.due = d.toISOString().slice(0,10);
+    }
+    else if (decision === "drop") { t.someday = true; t.due = null; }
+    else if (decision === "pin") { t.pinned = true; t.due = today; }
+  });
+  // Apply top-3 picks
+  state.tasks.forEach(t => { if (t.focus && !_dpTop3.has(t.id)) t.focus = false; });
+  _dpTop3.forEach(id => {
+    const t = state.tasks.find(x => x.id === id);
+    if (t) t.focus = true;
+  });
+  state.settings.lastDailyPlanDate = today;
+  save();
+  closeDailyPlan();
+  view = "today";
+  render();
+  if (intention) toast(`Today: ${intention}`);
+}
+
+function renderDailyPlan() {
+  const today = todayISO();
+  const d = new Date();
+  const dayName = d.toLocaleDateString(undefined, { weekday: "long" });
+  const monthDay = d.toLocaleDateString(undefined, { month: "long", day: "numeric" });
+  document.getElementById("dp-greeting").textContent =
+    `${dayName}, ${monthDay}`;
+
+  // Energy
+  const energyHost = document.getElementById("dp-energy");
+  const e = state.settings.dailyEnergyDate === today ? state.settings.dailyEnergy : null;
+  energyHost.innerHTML = [
+    { v: "high",  l: "🔥 Deep / High" },
+    { v: "med",   l: "⚡ Light / Med" },
+    { v: "low",   l: "🪫 Foggy / Low" },
+  ].map(o =>
+    `<button data-dp-energy="${o.v}" class="${e===o.v?'active':''}">${o.l}</button>`
+  ).join("");
+  energyHost.querySelectorAll("[data-dp-energy]").forEach(b => {
+    b.onclick = () => {
+      state.settings.dailyEnergy = b.dataset.dpEnergy;
+      state.settings.dailyEnergyDate = today;
+      save(); renderDailyPlan();
+    };
+  });
+
+  // Carry forward
+  const carryList = document.getElementById("dp-carry-list");
+  const carryHost = document.getElementById("dp-carry-host");
+  const carryQ = document.getElementById("dp-carry-q");
+  const carryTasks = state.tasks.filter(t =>
+    !t.done && !t.someday && !t.recurring && t.due && t.due < today
+  );
+  if (carryTasks.length === 0) {
+    carryQ.textContent = "📋 Nothing to carry forward 🎉";
+    carryList.innerHTML = `<div class="small muted">Clean slate from yesterday.</div>`;
+  } else {
+    carryQ.innerHTML = `📋 Carry-forward <span class="dp-summary">(${carryTasks.length} from yesterday)</span>`;
+    carryList.innerHTML = carryTasks.map(t => {
+      const dec = _dpCarryDecisions[t.id];
+      return `<div class="carry-row ${dec?'applied':''}" data-cid="${t.id}">
+        <div class="carry-title" title="${escapeAttr(t.title||'')}">${escapeHtml(t.title||'')}</div>
+        <div class="carry-actions">
+          <button data-cd="today" class="${dec==='today'?'active':''}">Today</button>
+          <button data-cd="tomorrow" class="${dec==='tomorrow'?'active':''}">Tom</button>
+          <button data-cd="pin" class="${dec==='pin'?'active':''}">📌</button>
+          <button data-cd="drop" class="${dec==='drop'?'active':''}">Drop</button>
+        </div>
+      </div>`;
+    }).join("");
+    carryList.querySelectorAll(".carry-row").forEach(row => {
+      const id = row.dataset.cid;
+      row.querySelectorAll("[data-cd]").forEach(b => {
+        b.onclick = () => {
+          _dpCarryDecisions[id] = b.dataset.cd;
+          renderDailyPlan();
+        };
+      });
+    });
+  }
+
+  // Top 3 picks
+  const top3Host = document.getElementById("dp-top3-list");
+  const top3Count = document.getElementById("dp-top3-count");
+  top3Count.textContent = `(${_dpTop3.size} / 3)`;
+  // Candidates: tasks due today (after carry decisions) or undated, not someday/recurring/done
+  // Use a fresh projection that respects carry decisions
+  const candidates = state.tasks.filter(t => {
+    if (t.done || t.someday || t.recurring) return false;
+    const dec = _dpCarryDecisions[t.id];
+    if (dec === "drop") return false;
+    if (dec === "tomorrow") return false;
+    return !t.due || t.due <= today || dec === "today" || dec === "pin";
+  }).sort((a, b) => {
+    const pri = { high: 0, med: 1, low: 2 };
+    return (pri[a.priority]||1) - (pri[b.priority]||1);
+  }).slice(0, 12);
+  if (candidates.length === 0) {
+    top3Host.innerHTML = `<div class="small muted">No active tasks for today. Add some via the capture bar after you finish here.</div>`;
+  } else {
+    top3Host.innerHTML = candidates.map(t => {
+      const picked = _dpTop3.has(t.id);
+      return `<div class="top3-row ${picked?'picked':''}" data-pid="${t.id}">
+        <div class="check">${picked?"✓":""}</div>
+        <div class="top3-title">${escapeHtml(t.title||'')}</div>
+        ${t.priority ? `<span class="chip ${t.priority}">${t.priority.toUpperCase()}</span>` : ""}
+        ${t.estimateMin ? `<span class="chip">⏱ ${t.estimateMin}m</span>` : ""}
+      </div>`;
+    }).join("");
+    top3Host.querySelectorAll(".top3-row").forEach(row => {
+      row.onclick = () => {
+        const id = row.dataset.pid;
+        if (_dpTop3.has(id)) _dpTop3.delete(id);
+        else if (_dpTop3.size < 3) _dpTop3.add(id);
+        else { toast("Pick up to 3 — uncheck one first"); return; }
+        renderDailyPlan();
+      };
+    });
+  }
+}
+
+/* ===========================================================
    SINGLE-TASK FOCUS MODE — full-screen, mobile-first
    =========================================================== */
 let _fmTaskId = null;
@@ -3430,6 +3755,11 @@ document.getElementById("ai-bridge-open").onclick = openAiBridge;
 document.getElementById("ai-bridge-close").onclick = closeAiBridge;
 document.getElementById("nav-ai-bridge").onclick = () => { closeMenu(); openAiBridge(); };
 document.getElementById("nav-siri").onclick = () => { closeMenu(); openSiriModal(); };
+document.getElementById("nav-daily-plan").onclick = () => { closeMenu(); openDailyPlan(); };
+
+/* Daily Plan wiring */
+document.getElementById("dp-snooze").onclick = snoozeDailyPlan;
+document.getElementById("dp-go").onclick = startDailyPlan;
 
 /* Siri modal wiring */
 document.getElementById("siri-close").onclick = closeSiriModal;
@@ -3586,6 +3916,7 @@ document.getElementById("default-focus").addEventListener("change", e => { state
 document.getElementById("show-done").addEventListener("change", e => { state.settings.showDone = e.target.value; save(); render(); });
 document.getElementById("setting-autoroll").addEventListener("change", e => { state.settings.autoRoll = e.target.checked; save(); });
 document.getElementById("setting-commsbump").addEventListener("change", e => { state.settings.commsAutoBump = e.target.checked; save(); });
+document.getElementById("setting-dailyplan").addEventListener("change", e => { state.settings.dailyPlanEnabled = e.target.checked; save(); });
 document.getElementById("req-notify").onclick = async () => {
   if (!("Notification" in window)) return toast("This browser does not support notifications.");
   const p = await Notification.requestPermission();
@@ -3636,6 +3967,7 @@ document.getElementById("default-focus").value = state.settings.defaultFocus || 
 document.getElementById("show-done").value = state.settings.showDone || "hide";
 document.getElementById("setting-autoroll").checked = state.settings.autoRoll !== false;
 document.getElementById("setting-commsbump").checked = state.settings.commsAutoBump !== false;
+document.getElementById("setting-dailyplan").checked = state.settings.dailyPlanEnabled !== false;
 if ("Notification" in window) document.getElementById("notify-status").textContent = "Status: " + Notification.permission;
 
 /* Roll forward routines that completed yesterday or earlier */
@@ -3662,6 +3994,9 @@ runDailySweeps();
 render();
 parseHashCapture();
 window.addEventListener("hashchange", parseHashCapture);
+if (shouldShowDailyPlan()) {
+  setTimeout(openDailyPlan, 150);
+}
 setInterval(checkDueReminders, 1000 * 60 * 5);
 checkDueReminders();
 
