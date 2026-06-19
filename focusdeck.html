@@ -319,6 +319,106 @@
   .sub input.sub-title:focus { box-shadow: none; }
   .sub.done input.sub-title { text-decoration: line-through; color: var(--muted); }
 
+  /* Comms status chip */
+  .chip.status-waiting { background: rgba(245,158,11,.16); color: #fed7aa; border-color: rgba(245,158,11,.35); }
+  .chip.status-replied { background: rgba(34,197,94,.16); color: #86efac; border-color: rgba(34,197,94,.35); }
+  .chip.status-closed { background: rgba(120,120,140,.16); color: var(--muted); border-color: rgba(120,120,140,.25); }
+  .chip.pinned { background: rgba(124,92,255,.12); color: #c7b7ff; border-color: rgba(124,92,255,.35); }
+  .chip.carry { background: rgba(245,158,11,.10); color: #fcd34d; border-color: rgba(245,158,11,.25); }
+
+  /* Today header strips — energy filter + quick wins */
+  .today-energy {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin: 4px 0 12px; padding: 10px 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md);
+  }
+  .today-energy .label { font-size: 12px; color: var(--muted); margin-right: 4px; }
+  .today-energy button {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+  }
+  .today-energy button:hover { border-color: var(--accent); }
+  .today-energy button.active {
+    background: var(--accent-soft); border-color: var(--accent); color: var(--accent);
+    font-weight: 600;
+  }
+
+  .quick-wins {
+    display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    margin-bottom: 12px; padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(34,197,94,.06), rgba(92,200,255,.04));
+    border: 1px solid rgba(34,197,94,.18); border-radius: var(--r-md);
+  }
+  .quick-wins .label { font-size: 12px; color: #86efac; font-weight: 600; }
+  .quick-wins button {
+    background: var(--panel); border: 1px solid var(--line); color: var(--text);
+    border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .quick-wins button:hover { border-color: #22c55e; color: #86efac; }
+  .quick-wins .empty { color: var(--muted); font-size: 12px; }
+
+  /* Focus mode — full-screen single task view */
+  .focus-mode {
+    position: fixed; inset: 0; z-index: 90;
+    background: radial-gradient(ellipse at top, #1a1530 0%, var(--bg) 60%);
+    display: none; flex-direction: column; padding: 24px;
+    overflow-y: auto;
+  }
+  .focus-mode.show { display: flex; }
+  .focus-mode .fm-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px; max-width: 720px; width: 100%; margin-left: auto; margin-right: auto;
+  }
+  .focus-mode .fm-content {
+    max-width: 720px; width: 100%; margin: 0 auto;
+    text-align: left; flex: 1;
+  }
+  .focus-mode .fm-title {
+    font-size: 28px; font-weight: 700; letter-spacing: -.02em;
+    line-height: 1.25; margin: 12px 0 18px;
+  }
+  .focus-mode .fm-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .focus-mode .fm-notes {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 14px; white-space: pre-wrap; margin-bottom: 18px; color: var(--text);
+    font-size: 14px; line-height: 1.55;
+  }
+  .focus-mode .fm-sub {
+    display: flex; gap: 10px; align-items: center; padding: 10px 12px;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md);
+    margin-bottom: 6px; cursor: pointer;
+  }
+  .focus-mode .fm-sub:hover { border-color: var(--accent); }
+  .focus-mode .fm-sub.done { opacity: .55; text-decoration: line-through; }
+  .focus-mode .fm-sub .check {
+    width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .focus-mode .fm-sub.done .check { background: var(--accent); border-color: var(--accent); color: white; }
+  .focus-mode .fm-timer {
+    font-variant-numeric: tabular-nums; font-size: 64px; font-weight: 700;
+    text-align: center; letter-spacing: -.04em; margin: 24px 0 12px;
+    color: var(--accent);
+  }
+  .focus-mode .fm-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 24px; }
+  .focus-mode .fm-done-btn {
+    background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: 0;
+    padding: 14px 32px; border-radius: 999px; font-size: 16px; font-weight: 600;
+    cursor: pointer; box-shadow: 0 4px 16px rgba(34,197,94,.3);
+    width: 100%; max-width: 280px; margin: 16px auto 8px; display: block;
+  }
+  .focus-mode .fm-done-btn:hover { transform: translateY(-1px); }
+
+  /* Capture banner from Siri / URL */
+  .capture-banner {
+    background: linear-gradient(135deg, rgba(124,92,255,.10), rgba(92,200,255,.08));
+    border: 1px solid rgba(124,92,255,.30); border-radius: var(--r-md);
+    padding: 10px 14px; margin-bottom: 10px; display: flex; gap: 10px; align-items: center;
+    font-size: 13px;
+  }
+  .capture-banner .x { margin-left: auto; cursor: pointer; color: var(--muted); }
+
   /* Right rail */
   .card {
     background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
@@ -462,6 +562,14 @@
     </div>
 
     <div class="nav-section">
+      <div class="nav-title">Tools</div>
+      <div class="row-gap">
+        <button class="btn small" id="nav-ai-bridge" title="Plan with AI, sync back">🤖 AI Bridge</button>
+        <button class="btn small" id="nav-siri" title="Set up iPhone capture">📱 Siri capture</button>
+      </div>
+    </div>
+
+    <div class="nav-section">
       <div class="nav-title">Data</div>
       <div class="row-gap">
         <button class="btn small" id="export-btn" title="Download a JSON backup">⬇ Export</button>
@@ -502,8 +610,36 @@
       <button class="btn primary" id="capture-btn">Add</button>
     </div>
 
+    <div id="capture-banner-host"></div>
     <div id="task-area"></div>
   </main>
+
+  <!-- Single-task Focus Mode (full-screen, mobile-friendly) -->
+  <div class="focus-mode" id="focus-mode">
+    <div class="fm-bar">
+      <button class="btn small" id="fm-back">← Back</button>
+      <span class="small muted" id="fm-context"></span>
+      <button class="btn small" id="fm-skip">Skip</button>
+    </div>
+    <div class="fm-content">
+      <div class="fm-meta" id="fm-meta"></div>
+      <div class="fm-title" id="fm-title">—</div>
+      <div class="fm-notes" id="fm-notes" style="display:none;"></div>
+      <div class="fm-timer" id="fm-timer">25:00</div>
+      <div class="fm-actions">
+        <button class="btn small" data-fm-timer="5">5m</button>
+        <button class="btn small" data-fm-timer="15">15m</button>
+        <button class="btn small" data-fm-timer="25">25m</button>
+        <button class="btn primary small" id="fm-timer-start">Start</button>
+        <button class="btn small" id="fm-timer-pause">Pause</button>
+      </div>
+      <div id="fm-subs"></div>
+      <button class="fm-done-btn" id="fm-mark-done">✓ Mark done</button>
+      <div class="small muted" style="text-align: center; margin-top: 8px;">
+        Press <kbd>Esc</kbd> to exit · Subtasks check off independently
+      </div>
+    </div>
+  </div>
 
   <!-- RIGHT RAIL -->
   <aside class="rail rail-right">
@@ -605,6 +741,18 @@
         <option value="hide">Hide from main views</option>
         <option value="show">Show, dimmed</option>
       </select>
+    </div>
+    <div class="field-row"><label>Auto-reschedule</label>
+      <div>
+        <label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer; margin-bottom: 4px;">
+          <input type="checkbox" id="setting-autoroll" style="width:auto;" />
+          <span>Roll overdue tasks forward to today (📌 pinned tasks stay put)</span>
+        </label>
+        <label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="setting-commsbump" style="width:auto;" />
+          <span>Surface ⏳ "waiting reply" tasks when their follow-up date arrives</span>
+        </label>
+      </div>
     </div>
     <div class="field-row"><label>Quick start</label>
       <div class="small muted">
@@ -754,6 +902,57 @@
   </div>
 </div>
 
+<!-- Siri / iPhone Capture setup modal -->
+<div class="modal-backdrop" id="siri-modal">
+  <div class="modal" style="max-width: 640px;">
+    <h3>📱 Siri / iPhone quick capture</h3>
+    <div class="small muted" style="margin-bottom: 14px; line-height: 1.55;">
+      Set up a Shortcut once. Then say <em>"Hey Siri, Focus Deck"</em> from anywhere — dictate a thought — it lands in your Inbox the next time the tab is open. Optional <strong>"…and plan it"</strong> phrase opens AI Bridge with your note ready to copy.
+    </div>
+
+    <details open style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">1 — Quick capture URL</summary>
+      <div class="small muted" style="margin: 8px 0 6px; line-height: 1.5;">
+        Anything Siri dictates becomes part of this URL. When the tab opens, the text auto-adds to Inbox.
+      </div>
+      <textarea readonly rows="2" id="siri-url-capture" style="font-family: ui-monospace, Menlo, monospace; font-size: 11px;"></textarea>
+      <button class="btn small primary" id="siri-copy-capture" style="margin-top: 6px;">📋 Copy capture URL</button>
+    </details>
+
+    <details style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">2 — "Plan with AI" URL</summary>
+      <div class="small muted" style="margin: 8px 0 6px; line-height: 1.5;">
+        Same idea but also opens AI Bridge, so you can copy the bundle prompt with your dictation already inline.
+      </div>
+      <textarea readonly rows="2" id="siri-url-plan" style="font-family: ui-monospace, Menlo, monospace; font-size: 11px;"></textarea>
+      <button class="btn small" id="siri-copy-plan" style="margin-top: 6px;">📋 Copy plan URL</button>
+    </details>
+
+    <details style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">3 — Build the Shortcut (one-time, ~60 seconds)</summary>
+      <ol style="margin: 8px 0; padding-left: 22px; line-height: 1.7; font-size: 13px;">
+        <li>iPhone → open <strong>Shortcuts</strong> app → tap <strong>+</strong> top-right.</li>
+        <li>Add action: <strong>Dictate Text</strong> (under Documents).</li>
+        <li>Add action: <strong>URL</strong>. Paste the capture URL from step 1 above. Replace the literal text <code>__SIRI__</code> at the end of the URL with a <strong>variable</strong>: tap the URL field → tap <em>Dictated Text</em> from the variables suggestion bar.</li>
+        <li>Add action: <strong>Open URLs</strong>.</li>
+        <li>Top of the shortcut: tap <strong>"Shortcut Name"</strong> → name it <strong>"Focus Deck"</strong> (whatever you say after "Hey Siri" to trigger it).</li>
+        <li>Done. Test: <em>"Hey Siri, Focus Deck"</em> → speak your task → it'll open Safari and the task lands in Inbox.</li>
+      </ol>
+      <div class="small muted" style="line-height: 1.5;">
+        For the "Plan with AI" flow, repeat steps with the URL from section 2 and name the Shortcut something like <strong>"Plan with Focus Deck"</strong>.
+      </div>
+    </details>
+
+    <div class="small muted" style="margin-top: 14px; line-height: 1.5; padding: 10px; background: var(--panel-2); border-radius: var(--r-md);">
+      <strong>Tip:</strong> If you've turned on Gist sync, captures made on any device (even offline) will replay into all your other devices the next time they open. Pin Focus Deck to your iPhone home screen for fastest open.
+    </div>
+
+    <div class="row-gap" style="margin-top: 14px; justify-content: flex-end;">
+      <button class="btn" id="siri-close">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- AI Bridge modal — round-trip planning with an AI session -->
 <div class="modal-backdrop" id="ai-bridge-modal">
   <div class="modal" style="max-width: 720px;">
@@ -837,6 +1036,11 @@ const DEFAULTS = {
     moodDate: null,
     lastCompletedDate: null,
     streak: 0,
+    autoRoll: true,
+    commsAutoBump: true,
+    lastAutoRollDate: null,
+    dailyEnergy: null,
+    dailyEnergyDate: null,
     sync: { tokenEnc: null, gistId: null, lastSyncedAt: null, lastError: null },
   },
   updatedAt: null,
@@ -937,12 +1141,14 @@ function render() {
   renderProjects();
   renderTags();
   renderTaskArea();
+  renderTodayStrips();
   renderCalendar();
   renderQuickLinks();
   renderCustomLinks();
   renderMood();
   updateCounts();
   updateStreakUI();
+  if (_fmTaskId) renderFocusMode();
   if (typeof _syncStatusEl === "function") _syncStatusEl();
   document.body.dataset.theme = state.settings.theme === "light" ? "light" : "dark";
 }
@@ -1056,9 +1262,14 @@ function renderTaskArea() {
 
 function filterForView(tasks) {
   const today = todayISO();
-  if (view === "today") return tasks.filter(t => !t.someday && !t.recurring && (
-    (t.due && t.due <= today) || !t.due || t.focus
-  ));
+  if (view === "today") {
+    let list = tasks.filter(t => !t.someday && !t.recurring && (
+      (t.due && t.due <= today) || !t.due || t.focus
+    ));
+    const e = state.settings.dailyEnergy;
+    if (e) list = list.filter(t => !t.energy || t.energy === e);
+    return list;
+  }
   if (view === "upcoming") return tasks.filter(t => !t.someday && !t.recurring && t.due && t.due > today);
   if (view === "inbox") return tasks.filter(t => !t.someday && !t.recurring && !t.due && t.project === "inbox");
   if (view === "recurring") return tasks.filter(t => t.recurring);
@@ -1118,6 +1329,11 @@ function renderTaskEl(t) {
           ${t.priority ? `<span class="chip ${t.priority}">${t.priority.toUpperCase()}</span>` : ""}
           ${t.energy ? `<span class="chip energy-${t.energy}">⚡${t.energy}</span>` : ""}
           ${due ? `<span class="chip ${due.cls}">📅 ${due.label}</span>` : ""}
+          ${t.followUp ? `<span class="chip status-waiting" title="Follow-up">↪ ${t.followUp}</span>` : ""}
+          ${t.status ? `<span class="chip status-${t.status}">${t.status==="waiting"?"⏳ waiting":t.status==="replied"?"✓ replied":"🔒 closed"}</span>` : ""}
+          ${t.pinned ? `<span class="chip pinned" title="Pinned — won't auto-roll">📌</span>` : ""}
+          ${t.carryDays ? `<span class="chip carry" title="Carried forward">↻ day ${t.carryDays}</span>` : ""}
+          ${t.estimateMin ? `<span class="chip" title="Estimated time">⏱ ${t.estimateMin<60?t.estimateMin+"m":Math.round(t.estimateMin/60)+"h"}</span>` : ""}
           ${project ? `<span class="chip" style="border-color:${project.color}33; color:${project.color};">● ${escapeHtml(project.name)}</span>` : ""}
           ${(t.tags||[]).map(x=>`<span class="chip tag">#${escapeHtml(x)}</span>`).join("")}
           ${subTotal ? `<span class="chip">☑ ${subDone}/${subTotal}</span>` : ""}
@@ -1127,6 +1343,7 @@ function renderTaskEl(t) {
         </div>
       </div>
       <div class="task-actions">
+        <button class="icon-btn" data-act="focus-mode" title="Single-task focus mode (full-screen)">▶</button>
         <button class="icon-btn" data-act="focus" title="Pick as focus task">🎯</button>
         <button class="icon-btn" data-act="send" title="Send / share with follow-up">✉</button>
         <button class="icon-btn" data-act="expand" title="Expand">${t.expanded ? "▴" : "▾"}</button>
@@ -1154,6 +1371,35 @@ function renderTaskEl(t) {
             <option value="med" ${t.energy==="med"?"selected":""}>Med energy</option>
             <option value="high" ${t.energy==="high"?"selected":""}>High energy</option>
           </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Follow-up</label>
+        <div class="row">
+          <input type="date" data-field="followUp" value="${t.followUp||""}" title="Separate from Due — for chase-ups, check-ins, waiting-for-reply" />
+          <select data-field="estimateMin" title="Roughly how long?">
+            <option value="">— Time est. —</option>
+            <option value="5" ${t.estimateMin==5?"selected":""}>5 min</option>
+            <option value="15" ${t.estimateMin==15?"selected":""}>15 min</option>
+            <option value="30" ${t.estimateMin==30?"selected":""}>30 min</option>
+            <option value="60" ${t.estimateMin==60?"selected":""}>1 hr</option>
+            <option value="120" ${t.estimateMin==120?"selected":""}>2+ hr</option>
+          </select>
+          <select data-field="status" title="Comms state — set when you Send">
+            <option value="">— Status —</option>
+            <option value="waiting" ${t.status==="waiting"?"selected":""}>⏳ Waiting reply</option>
+            <option value="replied" ${t.status==="replied"?"selected":""}>✓ Replied</option>
+            <option value="closed" ${t.status==="closed"?"selected":""}>🔒 Closed</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <label>Behaviour</label>
+        <div class="row" style="align-items: center;">
+          <label style="display:flex; gap:6px; align-items:center; font-size:12px; color:var(--text); cursor:pointer;">
+            <input type="checkbox" data-field="pinned" ${t.pinned?"checked":""} style="width:auto;" />
+            <span>📌 Pin date — don't auto-roll if overdue</span>
+          </label>
         </div>
       </div>
       <div class="field-row">
@@ -1309,6 +1555,8 @@ function handleAct(id, act, e) {
       document.getElementById("focus-task").textContent = "Focused: " + t.title;
       render();
       break;
+    case "focus-mode":
+      openFocusMode(id); break;
     case "toggle-someday":
       t.someday = !t.someday; save(); render(); break;
     case "send":
@@ -1377,6 +1625,13 @@ function fieldChange(id, inp) {
   else if (f === "project") t.project = inp.value;
   else if (f === "notes") t.notes = inp.value;
   else if (f === "recurring") t.recurring = inp.value || null;
+  else if (f === "followUp") t.followUp = inp.value || null;
+  else if (f === "estimateMin") t.estimateMin = inp.value ? +inp.value : null;
+  else if (f === "status") {
+    t.status = inp.value || null;
+    if (t.status === "replied" || t.status === "closed") t.followUp = null;
+  }
+  else if (f === "pinned") t.pinned = inp.checked;
   save();
 }
 
@@ -1807,6 +2062,16 @@ async function performSend() {
   btn.disabled = false;
   btn.textContent = "Send";
 
+  if (sent) {
+    t.status = "waiting";
+    t.lastSentAt = Date.now();
+    if (!t.followUp) {
+      const d = new Date(); d.setHours(0,0,0,0);
+      d.setDate(d.getDate() + (followupDays || 2));
+      t.followUp = d.toISOString().slice(0, 10);
+    }
+    save();
+  }
   if (sent && followup) {
     createFollowUp(t, contact, followupDays);
   }
@@ -2169,6 +2434,9 @@ function bundleExportObject() {
       priority: t.priority || "med",
       due: t.due || null,
       followUp: t.followUp || null,
+      estimateMin: t.estimateMin || null,
+      status: t.status || null,
+      pinned: !!t.pinned,
       energy: t.energy || null,
       notes: t.notes || "",
       someday: !!t.someday,
@@ -2216,6 +2484,9 @@ function bundleImport(bundle) {
       priority: ["high","med","low"].includes(bt.priority) ? bt.priority : "med",
       due: bt.due || null,
       followUp: bt.followUp || null,
+      estimateMin: bt.estimateMin != null ? +bt.estimateMin : null,
+      status: ["waiting","replied","closed"].includes(bt.status) ? bt.status : null,
+      pinned: !!bt.pinned,
       energy: bt.energy || null,
       notes: bt.notes || "",
       someday: !!bt.someday,
@@ -2313,8 +2584,11 @@ SCHEMA
       "tags": ["<tag>", "..."],
       "priority": "high|med|low",
       "due": "YYYY-MM-DD or null",
-      "followUp": "YYYY-MM-DD or null",
-      "energy": "deep|light",
+      "followUp": "YYYY-MM-DD or null  (separate from due — chase-ups, check-ins)",
+      "estimateMin": 5,
+      "status": "waiting|replied|closed or null  (for sent / chase tasks)",
+      "pinned": false,
+      "energy": "high|med|low  (deep work | light | foggy)",
       "notes": "<context, decisions, gotchas — markdown OK>",
       "someday": false,
       "recurring": "daily|weekdays|weekly|monthly or null",
@@ -2362,6 +2636,281 @@ async function copyText(s) {
   try { await navigator.clipboard.writeText(s); return true; }
   catch { return false; }
 }
+
+/* ===========================================================
+   DAILY SWEEPS — auto-roll overdue + comms auto-bump
+   Run once per local day on first render after midnight.
+   =========================================================== */
+function autoRollOverdue() {
+  if (!state.settings.autoRoll) return 0;
+  const today = todayISO();
+  let bumped = 0;
+  state.tasks.forEach(t => {
+    if (t.done || t.someday || t.recurring) return;
+    if (t.pinned) return;
+    if (!t.due || t.due >= today) return;
+    // Bump to today; track how many days it's been carrying
+    const origDue = new Date(t.due + "T00:00:00");
+    const now = new Date(today + "T00:00:00");
+    const daysLate = Math.max(1, Math.round((now - origDue) / 86400000));
+    t.carryDays = (t.carryDays || 0) + daysLate;
+    t.due = today;
+    bumped++;
+  });
+  return bumped;
+}
+function commsAutoBump() {
+  if (!state.settings.commsAutoBump) return 0;
+  const today = todayISO();
+  let bumped = 0;
+  state.tasks.forEach(t => {
+    if (t.done || t.someday) return;
+    if (t.status !== "waiting") return;
+    if (!t.followUp || t.followUp > today) return;
+    // Follow-up date has arrived — surface the task in Today
+    if (!t.due || t.due > today) t.due = today;
+    t.focus = true;
+    bumped++;
+  });
+  return bumped;
+}
+function runDailySweeps() {
+  const today = todayISO();
+  if (state.settings.lastAutoRollDate === today) return;
+  const rolled = autoRollOverdue();
+  const bumped = commsAutoBump();
+  state.settings.lastAutoRollDate = today;
+  save();
+  if (rolled || bumped) {
+    const parts = [];
+    if (rolled) parts.push(`${rolled} task${rolled===1?"":"s"} rolled forward`);
+    if (bumped) parts.push(`${bumped} follow-up${bumped===1?"":"s"} surfaced`);
+    setTimeout(() => toast(parts.join(" · ")), 600);
+  }
+}
+
+/* ===========================================================
+   SINGLE-TASK FOCUS MODE — full-screen, mobile-first
+   =========================================================== */
+let _fmTaskId = null;
+let _fmTimer = { remaining: 25*60, running: false, interval: null };
+function openFocusMode(id) {
+  const t = state.tasks.find(x => x.id === id);
+  if (!t) return;
+  _fmTaskId = id;
+  _fmTimer.remaining = (state.settings.defaultFocus || 25) * 60;
+  _fmTimer.running = false;
+  clearInterval(_fmTimer.interval);
+  renderFocusMode();
+  paintFmTimer();
+  document.getElementById("focus-mode").classList.add("show");
+  document.body.style.overflow = "hidden";
+}
+function closeFocusMode() {
+  _fmTaskId = null;
+  _fmTimer.running = false;
+  clearInterval(_fmTimer.interval);
+  document.getElementById("focus-mode").classList.remove("show");
+  document.body.style.overflow = "";
+  render();
+}
+function renderFocusMode() {
+  const t = state.tasks.find(x => x.id === _fmTaskId);
+  if (!t) { closeFocusMode(); return; }
+  const proj = state.projects.find(p => p.id === t.project);
+  document.getElementById("fm-context").textContent = proj ? proj.name : "";
+  document.getElementById("fm-title").textContent = t.title || "(untitled)";
+  const meta = document.getElementById("fm-meta");
+  const due = fmtDueChip(t.due);
+  meta.innerHTML = [
+    t.priority ? `<span class="chip ${t.priority}">${t.priority.toUpperCase()}</span>` : "",
+    due ? `<span class="chip ${due.cls}">📅 ${due.label}</span>` : "",
+    t.energy ? `<span class="chip energy-${t.energy}">⚡${t.energy}</span>` : "",
+    t.estimateMin ? `<span class="chip">⏱ ${t.estimateMin<60?t.estimateMin+"m":Math.round(t.estimateMin/60)+"h"}</span>` : "",
+  ].filter(Boolean).join("");
+  const notes = document.getElementById("fm-notes");
+  if (t.notes && t.notes.trim()) { notes.textContent = t.notes; notes.style.display = "block"; }
+  else { notes.style.display = "none"; }
+  const subs = document.getElementById("fm-subs");
+  subs.innerHTML = (t.subtasks || []).map(s =>
+    `<div class="fm-sub ${s.done?"done":""}" data-sid="${s.id}">
+       <div class="check">${s.done?"✓":""}</div>
+       <div>${escapeHtml(s.title)}</div>
+     </div>`
+  ).join("");
+  subs.querySelectorAll(".fm-sub").forEach(el => {
+    el.onclick = () => {
+      const task = state.tasks.find(x => x.id === _fmTaskId);
+      const s = task.subtasks.find(x => x.id === el.dataset.sid);
+      s.done = !s.done; save(); renderFocusMode();
+    };
+  });
+}
+function paintFmTimer() {
+  const m = Math.floor(_fmTimer.remaining/60).toString().padStart(2,"0");
+  const s = (_fmTimer.remaining % 60).toString().padStart(2,"0");
+  document.getElementById("fm-timer").textContent = m + ":" + s;
+}
+function startFmTimer() {
+  if (_fmTimer.running) return;
+  _fmTimer.running = true;
+  _fmTimer.interval = setInterval(() => {
+    _fmTimer.remaining = Math.max(0, _fmTimer.remaining - 1);
+    paintFmTimer();
+    if (_fmTimer.remaining === 0) {
+      _fmTimer.running = false; clearInterval(_fmTimer.interval);
+      toast("🎯 Focus done — take a break.");
+      if ("Notification" in window && Notification.permission === "granted") {
+        new Notification("Focus done", { body: "Take a break, then pick the next thing." });
+      }
+    }
+  }, 1000);
+}
+
+/* ===========================================================
+   TODAY STRIPS — energy filter + quick wins
+   =========================================================== */
+function renderTodayStrips() {
+  const host = document.getElementById("task-area");
+  if (view !== "today" || !host) return;
+  // Energy strip
+  const today = todayISO();
+  if (state.settings.dailyEnergyDate !== today) {
+    state.settings.dailyEnergy = null;
+    state.settings.dailyEnergyDate = today;
+  }
+  const energy = state.settings.dailyEnergy;
+  const energyStrip = document.createElement("div");
+  energyStrip.className = "today-energy";
+  energyStrip.innerHTML = `
+    <span class="label">⚡ Your energy:</span>
+    <button data-energy="high" class="${energy==='high'?'active':''}">🔥 Deep / High</button>
+    <button data-energy="med" class="${energy==='med'?'active':''}">⚡ Light / Med</button>
+    <button data-energy="low" class="${energy==='low'?'active':''}">🪫 Foggy / Low</button>
+    ${energy ? `<button data-energy="" title="Clear filter">✕ clear</button>` : ""}
+  `;
+  energyStrip.querySelectorAll("button[data-energy]").forEach(b => {
+    b.onclick = () => {
+      const v = b.dataset.energy;
+      state.settings.dailyEnergy = v || null;
+      state.settings.dailyEnergyDate = today;
+      save(); render();
+    };
+  });
+  host.insertBefore(energyStrip, host.firstChild);
+
+  // Quick-wins strip
+  const wins = getQuickWins();
+  const winsStrip = document.createElement("div");
+  winsStrip.className = "quick-wins";
+  if (wins.length === 0) {
+    winsStrip.innerHTML = `<span class="label">⚡ Quick wins:</span> <span class="empty">Add a time estimate (5/15/30 min) on tasks to surface them here.</span>`;
+  } else {
+    winsStrip.innerHTML = `<span class="label">⚡ Quick wins —</span>` + wins.map(t =>
+      `<button data-quick-id="${t.id}">${t.estimateMin}m · ${escapeHtml((t.title||"").slice(0,40))}${(t.title||"").length>40?"…":""}</button>`
+    ).join("");
+    winsStrip.querySelectorAll("[data-quick-id]").forEach(b => {
+      b.onclick = () => openFocusMode(b.dataset.quickId);
+    });
+  }
+  host.insertBefore(winsStrip, host.firstChild.nextSibling);
+}
+function getQuickWins() {
+  const today = todayISO();
+  return state.tasks
+    .filter(t => !t.done && !t.someday && t.estimateMin && t.estimateMin <= 30)
+    .filter(t => !t.due || t.due <= today)
+    .sort((a, b) => a.estimateMin - b.estimateMin)
+    .slice(0, 4);
+}
+
+/* ===========================================================
+   SIRI / URL HASH CAPTURE
+   Format:
+     #capture=<urlencoded text>          → adds task to Inbox
+     #capture=<text>&plan=1              → adds + opens AI Bridge
+   =========================================================== */
+function siriUrls() {
+  const base = location.origin + location.pathname;
+  return {
+    capture: base + "#capture=__SIRI__",
+    plan: base + "#capture=__SIRI__&plan=1",
+  };
+}
+function parseHashCapture() {
+  if (!location.hash || !location.hash.includes("capture=")) return;
+  const params = new URLSearchParams(location.hash.slice(1));
+  const text = (params.get("capture") || "").trim();
+  if (!text || text === "__SIRI__") {
+    // Empty / template placeholder — just clear the hash
+    history.replaceState(null, "", location.pathname);
+    return;
+  }
+  const plan = params.get("plan") === "1";
+  // Add to inbox via the existing capture parser (so tags/projects in the text still work)
+  const parsed = parseCapture(text);
+  const t = {
+    id: uid(),
+    title: parsed.title || text,
+    project: parsed.project || "inbox",
+    tags: parsed.tags || [],
+    priority: parsed.priority || "med",
+    due: parsed.due,
+    energy: parsed.energy,
+    followUp: null,
+    estimateMin: null,
+    status: null,
+    pinned: false,
+    notes: "",
+    someday: false,
+    recurring: null,
+    subtasks: [],
+    attachments: [],
+    done: false,
+    expanded: false,
+    focus: false,
+    createdAt: Date.now(),
+    source: "siri",
+  };
+  state.tasks.unshift(t);
+  save();
+  history.replaceState(null, "", location.pathname);
+  showCaptureBanner(t, plan);
+  render();
+  if (plan) {
+    setTimeout(() => {
+      openAiBridge();
+      // Pre-fill seed into the prompt-readonly textarea is moot — easier: pop a toast.
+      toast("AI Bridge open — your note is in Inbox; describe it in the prompt's 'What to plan' line.");
+    }, 250);
+  }
+}
+function showCaptureBanner(t, viaPlan) {
+  const host = document.getElementById("capture-banner-host");
+  if (!host) return;
+  host.innerHTML = `
+    <div class="capture-banner">
+      <span>📥</span>
+      <span><strong>From Siri:</strong> "${escapeHtml((t.title||"").slice(0,80))}" → added to Inbox.</span>
+      ${viaPlan ? "" : `<button class="btn small" data-banner-plan>Send to AI Bridge</button>`}
+      <span class="x" data-banner-dismiss>✕</span>
+    </div>`;
+  const plan = host.querySelector("[data-banner-plan]");
+  if (plan) plan.onclick = () => { host.innerHTML = ""; openAiBridge(); };
+  host.querySelector("[data-banner-dismiss]").onclick = () => { host.innerHTML = ""; };
+  setTimeout(() => { host.innerHTML = ""; }, 30000);
+}
+
+/* ===========================================================
+   SIRI SETUP MODAL
+   =========================================================== */
+function openSiriModal() {
+  const urls = siriUrls();
+  document.getElementById("siri-url-capture").value = urls.capture;
+  document.getElementById("siri-url-plan").value = urls.plan;
+  document.getElementById("siri-modal").classList.add("show");
+}
+function closeSiriModal() { document.getElementById("siri-modal").classList.remove("show"); }
 
 /* ---------- timer ---------- */
 let timer = { remaining: 25*60, running: false, interval: null };
@@ -2879,6 +3428,49 @@ document.getElementById("send-add-file").onclick = () => {
 /* AI Bridge wiring */
 document.getElementById("ai-bridge-open").onclick = openAiBridge;
 document.getElementById("ai-bridge-close").onclick = closeAiBridge;
+document.getElementById("nav-ai-bridge").onclick = () => { closeMenu(); openAiBridge(); };
+document.getElementById("nav-siri").onclick = () => { closeMenu(); openSiriModal(); };
+
+/* Siri modal wiring */
+document.getElementById("siri-close").onclick = closeSiriModal;
+document.getElementById("siri-modal").addEventListener("click", e => {
+  if (e.target.id === "siri-modal") closeSiriModal();
+});
+document.getElementById("siri-copy-capture").onclick = async () => {
+  const ok = await copyText(document.getElementById("siri-url-capture").value);
+  if (ok) toast("Capture URL copied"); else toast("Copy failed — select text manually");
+};
+document.getElementById("siri-copy-plan").onclick = async () => {
+  const ok = await copyText(document.getElementById("siri-url-plan").value);
+  if (ok) toast("Plan URL copied"); else toast("Copy failed — select text manually");
+};
+
+/* Focus mode wiring */
+document.getElementById("fm-back").onclick = closeFocusMode;
+document.getElementById("fm-skip").onclick = () => {
+  const t = state.tasks.find(x => x.id === _fmTaskId);
+  if (t) {
+    const d = new Date(t.due ? t.due + "T00:00:00" : new Date());
+    d.setDate(d.getDate() + 1);
+    t.due = d.toISOString().slice(0,10);
+    save(); toast("Snoozed to tomorrow"); closeFocusMode();
+  } else closeFocusMode();
+};
+document.getElementById("fm-mark-done").onclick = () => {
+  if (_fmTaskId) { toggleDone(_fmTaskId); closeFocusMode(); }
+};
+document.querySelectorAll("[data-fm-timer]").forEach(b => {
+  b.onclick = () => {
+    _fmTimer.remaining = (+b.dataset.fmTimer) * 60;
+    _fmTimer.running = false;
+    clearInterval(_fmTimer.interval);
+    paintFmTimer();
+  };
+});
+document.getElementById("fm-timer-start").onclick = startFmTimer;
+document.getElementById("fm-timer-pause").onclick = () => {
+  _fmTimer.running = false; clearInterval(_fmTimer.interval);
+};
 document.getElementById("ai-bridge-modal").addEventListener("click", e => {
   if (e.target.id === "ai-bridge-modal") closeAiBridge();
 });
@@ -2992,6 +3584,8 @@ setInterval(() => _syncStatusEl(), 30 * 1000);
 setInterval(() => { if (getSyncToken() && document.hasFocus() && !_syncBusy) syncPull().catch(_syncFail); }, 5 * 60 * 1000);
 document.getElementById("default-focus").addEventListener("change", e => { state.settings.defaultFocus = +e.target.value; save(); });
 document.getElementById("show-done").addEventListener("change", e => { state.settings.showDone = e.target.value; save(); render(); });
+document.getElementById("setting-autoroll").addEventListener("change", e => { state.settings.autoRoll = e.target.checked; save(); });
+document.getElementById("setting-commsbump").addEventListener("change", e => { state.settings.commsAutoBump = e.target.checked; save(); });
 document.getElementById("req-notify").onclick = async () => {
   if (!("Notification" in window)) return toast("This browser does not support notifications.");
   const p = await Notification.requestPermission();
@@ -3001,6 +3595,9 @@ document.getElementById("req-notify").onclick = async () => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && document.getElementById("lightbox").classList.contains("show")) {
     closeLightbox(); return;
+  }
+  if (e.key === "Escape" && document.getElementById("focus-mode").classList.contains("show")) {
+    closeFocusMode(); return;
   }
   if (e.target.matches("input, textarea, [contenteditable]")) return;
   if (e.key === "/") { e.preventDefault(); document.getElementById("search").focus(); }
@@ -3037,6 +3634,8 @@ document.getElementById("lightbox").addEventListener("click", (e) => {
 /* Init pickers from settings */
 document.getElementById("default-focus").value = state.settings.defaultFocus || 25;
 document.getElementById("show-done").value = state.settings.showDone || "hide";
+document.getElementById("setting-autoroll").checked = state.settings.autoRoll !== false;
+document.getElementById("setting-commsbump").checked = state.settings.commsAutoBump !== false;
 if ("Notification" in window) document.getElementById("notify-status").textContent = "Status: " + Notification.permission;
 
 /* Roll forward routines that completed yesterday or earlier */
@@ -3059,7 +3658,10 @@ if ("Notification" in window) document.getElementById("notify-status").textConte
 })();
 
 resetTimer();
+runDailySweeps();
 render();
+parseHashCapture();
+window.addEventListener("hashchange", parseHashCapture);
 setInterval(checkDueReminders, 1000 * 60 * 5);
 checkDueReminders();
 
