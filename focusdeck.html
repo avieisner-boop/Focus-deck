@@ -5,7 +5,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <meta name="theme-color" content="#0b0d12" />
 <title>Focus Deck — ADHD-friendly Daily Command Center</title>
+<!-- iOS / Android home-screen app (Add to Home Screen → full-screen standalone) -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Focus Deck" />
+<meta name="application-name" content="Focus Deck" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c5cff'/%3E%3Cpath d='M18 33l9 9 19-22' stroke='white' stroke-width='6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<!-- apple-touch-icon (raster PNG) is generated at runtime and injected here so iOS Add-to-Home-Screen picks up a proper icon -->
+<link rel="apple-touch-icon" id="apple-touch-icon" />
 <style>
   :root {
     --bg: #0a0c10;
@@ -419,6 +427,80 @@
   }
   .capture-banner .x { margin-left: auto; cursor: pointer; color: var(--muted); }
 
+  /* Standalone (Home-screen app) — respect the notch / home indicator */
+  @supports (padding: max(0px)) {
+    body.standalone .rail-left { padding-top: max(22px, env(safe-area-inset-top)); }
+    body.standalone main { padding-top: max(0px, env(safe-area-inset-top)); }
+    body.standalone .focus-mode, body.standalone .daily-plan {
+      padding-top: max(24px, env(safe-area-inset-top));
+      padding-bottom: max(24px, env(safe-area-inset-bottom));
+    }
+    body.standalone .modal { margin-bottom: env(safe-area-inset-bottom); }
+  }
+
+  /* Mood ping — non-blocking pill after completing a task */
+  .mood-ping {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--panel); border: 1px solid var(--line); border-radius: 999px;
+    padding: 8px 12px; display: none; gap: 8px; align-items: center;
+    z-index: 101; box-shadow: var(--shadow-lg); opacity: 0;
+    transition: opacity .18s var(--ease), transform .18s var(--ease);
+  }
+  .mood-ping.show { display: flex; opacity: 1; transform: translateX(-50%) translateY(0); }
+  .mood-ping .mp-label { font-size: 12px; color: var(--muted); margin-right: 2px; }
+  .mood-ping button {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: 999px;
+    width: 36px; height: 36px; font-size: 18px; cursor: pointer; line-height: 1;
+  }
+  .mood-ping button:hover { border-color: var(--accent); transform: scale(1.08); }
+  .mood-ping .mp-x { width: auto; padding: 0 8px; font-size: 13px; color: var(--muted); }
+
+  /* Voice capture modal */
+  .voice-orb {
+    width: 96px; height: 96px; border-radius: 50%; margin: 8px auto 16px;
+    background: radial-gradient(circle at 50% 40%, #8b6bff, #5b3fd6);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px; cursor: pointer; user-select: none;
+    box-shadow: 0 8px 30px rgba(124,92,255,.35);
+    transition: transform .15s var(--ease);
+  }
+  .voice-orb:active { transform: scale(.95); }
+  .voice-orb.listening { animation: voicePulse 1.4s ease-in-out infinite; }
+  @keyframes voicePulse {
+    0%,100% { box-shadow: 0 8px 30px rgba(124,92,255,.35); }
+    50% { box-shadow: 0 8px 40px rgba(124,92,255,.7), 0 0 0 12px rgba(124,92,255,.08); }
+  }
+  .voice-transcript {
+    min-height: 70px; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: var(--r-md); padding: 12px 14px; font-size: 15px; line-height: 1.5;
+    margin-bottom: 12px; white-space: pre-wrap; color: var(--text);
+  }
+  .voice-transcript .interim { color: var(--muted); }
+  .voice-transcript .placeholder { color: var(--muted); }
+
+  /* Insights modal — bar charts */
+  .insights-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 16px; }
+  .insights-stat {
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 12px; text-align: center;
+  }
+  .insights-stat .num { font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--accent); }
+  .insights-stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 110px; margin: 8px 0 4px; }
+  .bar-chart .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; height: 100%; justify-content: flex-end; }
+  .bar-chart .bar {
+    width: 100%; max-width: 26px; background: linear-gradient(180deg, var(--accent), #5b3fd6);
+    border-radius: 4px 4px 0 0; min-height: 2px; transition: height .3s var(--ease);
+  }
+  .bar-chart .bar.today { background: linear-gradient(180deg, #22c55e, #16a34a); }
+  .bar-chart .bar-lbl { font-size: 9px; color: var(--muted); }
+  .bar-chart .bar-val { font-size: 10px; color: var(--text); font-weight: 600; }
+  .corr-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 13px; }
+  .corr-row .corr-bar-wrap { flex: 1; height: 14px; background: var(--panel-2); border-radius: 999px; overflow: hidden; }
+  .corr-row .corr-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #5cc8ff); border-radius: 999px; }
+  .corr-row .corr-lbl { width: 90px; color: var(--muted); }
+  .corr-row .corr-num { width: 36px; text-align: right; font-variant-numeric: tabular-nums; }
+
   /* Daily plan ritual — opens once per day, gates the app */
   .daily-plan {
     position: fixed; inset: 0; z-index: 95;
@@ -661,8 +743,10 @@
       <div class="nav-title">Tools</div>
       <div class="row-gap">
         <button class="btn small" id="nav-daily-plan" title="Reopen today's plan">🌅 Daily plan</button>
+        <button class="btn small" id="nav-voice" title="Dictate a task by voice">🎤 Voice</button>
+        <button class="btn small" id="nav-insights" title="Productivity insights & trends">📊 Insights</button>
         <button class="btn small" id="nav-ai-bridge" title="Plan with AI, sync back">🤖 AI Bridge</button>
-        <button class="btn small" id="nav-siri" title="Set up iPhone capture">📱 Siri capture</button>
+        <button class="btn small" id="nav-siri" title="Set up iPhone Siri shortcuts">📱 Siri setup</button>
       </div>
     </div>
 
@@ -704,12 +788,22 @@
     <div class="capture">
       <span class="hint">＋</span>
       <input id="capture" placeholder="Brain dump… (Enter to add, prefix with #tag, @project, !high, ^today, ^fri, ~30m)" autofocus />
+      <button class="btn" id="voice-btn" title="Voice capture (dictate a task or ramble)">🎤</button>
       <button class="btn primary" id="capture-btn">Add</button>
     </div>
 
     <div id="capture-banner-host"></div>
     <div id="task-area"></div>
   </main>
+
+  <!-- Mood ping — appears briefly after completing a task -->
+  <div class="mood-ping" id="mood-ping">
+    <span class="mp-label">How'd that feel?</span>
+    <button data-mp="3" title="Great / energizing">😄</button>
+    <button data-mp="2" title="Fine / neutral">🙂</button>
+    <button data-mp="1" title="Draining / hard">😮‍💨</button>
+    <button class="mp-x" id="mp-dismiss" title="Dismiss">✕</button>
+  </div>
 
   <!-- Daily Plan Ritual — gates the app on first open each day -->
   <div class="daily-plan" id="daily-plan">
@@ -895,6 +989,14 @@
         <label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer;">
           <input type="checkbox" id="setting-dailyplan" style="width:auto;" />
           <span>Show the 3-decision ritual on first open each day (one snooze per day still applies)</span>
+        </label>
+      </div>
+    </div>
+    <div class="field-row"><label>Mood check-in</label>
+      <div>
+        <label style="display:flex; gap:6px; align-items:center; font-size:13px; cursor:pointer;">
+          <input type="checkbox" id="setting-moodping" style="width:auto;" />
+          <span>Ask "how'd that feel?" after completing a task (feeds 📊 Insights)</span>
         </label>
       </div>
     </div>
@@ -1087,12 +1189,71 @@
       </div>
     </details>
 
+    <details style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">4 — More Siri actions (optional shortcuts)</summary>
+      <div class="small muted" style="margin: 8px 0; line-height: 1.5;">
+        Build a Shortcut with a single <strong>Open URLs</strong> action (no dictation needed) for each of these. Name each one what you'll say to Siri.
+      </div>
+      <div id="siri-actions"></div>
+    </details>
+
+    <details style="margin-bottom: 12px;">
+      <summary style="color: var(--accent); font-size: 13px; font-weight: 600;">5 — View this on your iPhone (Home-screen app)</summary>
+      <ol style="margin: 8px 0; padding-left: 22px; line-height: 1.7; font-size: 13px;">
+        <li>Open this page's URL in <strong>Safari</strong> on your iPhone:<br><code id="siri-app-url" style="word-break: break-all;"></code></li>
+        <li>Tap the <strong>Share</strong> button (square with ↑) → <strong>Add to Home Screen</strong>.</li>
+        <li>Name it <strong>Focus Deck</strong> → <strong>Add</strong>.</li>
+        <li>Launch from the new icon — it opens <strong>full-screen</strong>, no Safari bars, like a native app.</li>
+      </ol>
+      <button class="btn small" id="siri-copy-appurl">📋 Copy app URL</button>
+    </details>
+
     <div class="small muted" style="margin-top: 14px; line-height: 1.5; padding: 10px; background: var(--panel-2); border-radius: var(--r-md);">
-      <strong>Tip:</strong> If you've turned on Gist sync, captures made on any device (even offline) will replay into all your other devices the next time they open. Pin Focus Deck to your iPhone home screen for fastest open.
+      <strong>Tip:</strong> Turn on Gist sync (Settings → Cloud sync) so captures from your iPhone, laptop, and anywhere else all merge together. Add to Home Screen first for the fastest open.
     </div>
 
     <div class="row-gap" style="margin-top: 14px; justify-content: flex-end;">
       <button class="btn" id="siri-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Voice capture modal -->
+<div class="modal-backdrop" id="voice-modal">
+  <div class="modal" style="max-width: 480px; text-align: center;">
+    <h3>🎤 Voice capture</h3>
+    <div class="small muted" style="margin-bottom: 8px; line-height: 1.5;" id="voice-help">
+      Tap the orb and talk. One task, or ramble — turn on "split into many" to make each sentence its own task.
+    </div>
+    <div class="voice-orb" id="voice-orb">🎤</div>
+    <div class="small muted" id="voice-status" style="margin-bottom: 10px;">Tap to start</div>
+    <div class="voice-transcript" id="voice-transcript"><span class="placeholder">Your words will appear here…</span></div>
+    <label style="display:flex; gap:6px; align-items:center; justify-content:center; font-size:12.5px; cursor:pointer; margin-bottom: 12px;">
+      <input type="checkbox" id="voice-ramble" style="width:auto;" />
+      <span>Ramble mode — split into multiple tasks (one per sentence)</span>
+    </label>
+    <div class="row-gap" style="justify-content: center;">
+      <button class="btn" id="voice-cancel">Cancel</button>
+      <button class="btn" id="voice-toai" title="Send transcript to AI Bridge to organize">🤖 Send to AI</button>
+      <button class="btn primary" id="voice-add" disabled>Add task(s)</button>
+    </div>
+  </div>
+</div>
+
+<!-- Insights modal -->
+<div class="modal-backdrop" id="insights-modal">
+  <div class="modal" style="max-width: 560px;">
+    <h3>📊 Insights</h3>
+    <div class="insights-grid" id="insights-stats"></div>
+    <div style="margin-bottom: 6px; font-size: 13px; font-weight: 600;">Completions — last 14 days</div>
+    <div class="bar-chart" id="insights-chart"></div>
+    <div id="insights-corr-host" style="margin-top: 16px;">
+      <div style="margin-bottom: 6px; font-size: 13px; font-weight: 600;">When do you ship most?</div>
+      <div id="insights-corr"></div>
+    </div>
+    <div class="small muted" id="insights-mood" style="margin-top: 14px; line-height: 1.5;"></div>
+    <div class="row-gap" style="margin-top: 16px; justify-content: flex-end;">
+      <button class="btn" id="insights-close">Close</button>
     </div>
   </div>
 </div>
@@ -1172,6 +1333,7 @@ const DEFAULTS = {
   ],
   customLinks: [],
   contacts: [],
+  completionLog: [],
   settings: {
     theme: "dark",
     defaultFocus: 25,
@@ -1190,6 +1352,7 @@ const DEFAULTS = {
     dailyPlanEnabled: true,
     dailyIntention: null,
     dailyIntentionDate: null,
+    askMoodOnComplete: true,
     sync: { tokenEnc: null, gistId: null, lastSyncedAt: null, lastError: null },
   },
   updatedAt: null,
@@ -1790,11 +1953,56 @@ function toggleDone(id) {
   if (t.done) {
     t.completedAt = Date.now();
     bumpStreak();
+    recordCompletion(t);
     if (t.recurring) spawnRecurring(t);
+    save(); render();
+    if (state.settings.askMoodOnComplete !== false) showMoodPing(t.id);
   } else {
     t.completedAt = null;
+    // Un-completing — drop the most recent log entry for this task today
+    const today = todayISO();
+    const log = state.completionLog || [];
+    let idx = -1;
+    for (let i = log.length - 1; i >= 0; i--) {
+      if (log[i].taskId === id && log[i].date === today) { idx = i; break; }
+    }
+    if (idx >= 0) log.splice(idx, 1);
+    save(); render();
   }
-  save(); render();
+}
+
+function recordCompletion(t) {
+  (state.completionLog ||= []).push({
+    ts: Date.now(),
+    date: todayISO(),
+    taskId: t.id,
+    title: t.title || "",
+    project: t.project || null,
+    mood: null,
+    dayEnergy: state.settings.dailyEnergyDate === todayISO() ? state.settings.dailyEnergy : null,
+  });
+  // Cap log size
+  if (state.completionLog.length > 600) {
+    state.completionLog = state.completionLog.slice(-600);
+  }
+}
+
+let _moodPingTimer = null;
+function showMoodPing(taskId) {
+  const el = document.getElementById("mood-ping");
+  if (!el) return;
+  el.dataset.taskId = taskId;
+  el.classList.add("show");
+  clearTimeout(_moodPingTimer);
+  _moodPingTimer = setTimeout(() => el.classList.remove("show"), 6000);
+}
+function logCompletionMood(taskId, mood) {
+  const log = state.completionLog || [];
+  // Find the most recent entry for this task and set mood
+  for (let i = log.length - 1; i >= 0; i--) {
+    if (log[i].taskId === taskId) { log[i].mood = mood; break; }
+  }
+  save();
 }
 
 function spawnRecurring(t) {
@@ -3150,29 +3358,91 @@ function getQuickWins() {
 }
 
 /* ===========================================================
-   SIRI / URL HASH CAPTURE
-   Format:
-     #capture=<urlencoded text>          → adds task to Inbox
-     #capture=<text>&plan=1              → adds + opens AI Bridge
+   SIRI / URL HASH ROUTER
+   Formats:
+     #capture=<text>            → add task to Inbox
+     #capture=<text>&plan=1     → add + open AI Bridge
+     #mood=1|2|3                → set today's energy
+     #action=dailyplan          → open the daily plan ritual
+     #action=focus              → open Focus Mode on top task
+     #action=voice              → open voice capture
+     #action=insights           → open insights
    =========================================================== */
 function siriUrls() {
   const base = location.origin + location.pathname;
   return {
-    capture: base + "#capture=__SIRI__",
-    plan: base + "#capture=__SIRI__&plan=1",
+    capture:   base + "#capture=__SIRI__",
+    plan:      base + "#capture=__SIRI__&plan=1",
+    moodHigh:  base + "#mood=3",
+    moodMed:   base + "#mood=2",
+    moodLow:   base + "#mood=1",
+    dailyplan: base + "#action=dailyplan",
+    focus:     base + "#action=focus",
+    voice:     base + "#action=voice",
+    insights:  base + "#action=insights",
+    app:       base,
   };
 }
 function parseHashCapture() {
-  if (!location.hash || !location.hash.includes("capture=")) return;
+  if (!location.hash) return;
   const params = new URLSearchParams(location.hash.slice(1));
+
+  // --- mood / energy from Siri ---
+  if (params.has("mood")) {
+    const m = +params.get("mood");
+    history.replaceState(null, "", location.pathname);
+    if (m >= 1 && m <= 3) {
+      const map = { 1: "low", 2: "med", 3: "high" };
+      state.settings.dailyEnergy = map[m];
+      state.settings.dailyEnergyDate = todayISO();
+      state.settings.mood = m;
+      state.settings.moodDate = todayISO();
+      save(); render();
+      toast(`Energy logged: ${({1:"🪫 low",2:"⚡ med",3:"🔥 high"})[m]}`);
+    }
+    return;
+  }
+
+  // --- action shortcuts from Siri ---
+  if (params.has("action")) {
+    const a = params.get("action");
+    history.replaceState(null, "", location.pathname);
+    if (a === "dailyplan") setTimeout(openDailyPlan, 100);
+    else if (a === "voice") setTimeout(openVoiceCapture, 100);
+    else if (a === "insights") setTimeout(openInsights, 100);
+    else if (a === "focus") {
+      const top = pickTopTask();
+      if (top) setTimeout(() => openFocusMode(top.id), 100);
+      else toast("No active task to focus on — add one first.");
+    }
+    return;
+  }
+
+  // --- capture ---
+  if (!location.hash.includes("capture=")) return;
   const text = (params.get("capture") || "").trim();
   if (!text || text === "__SIRI__") {
-    // Empty / template placeholder — just clear the hash
     history.replaceState(null, "", location.pathname);
     return;
   }
   const plan = params.get("plan") === "1";
-  // Add to inbox via the existing capture parser (so tags/projects in the text still work)
+  addCapturedTask(text, plan);
+  history.replaceState(null, "", location.pathname);
+}
+
+function pickTopTask() {
+  const today = todayISO();
+  const pool = state.tasks.filter(t => !t.done && !t.someday && !t.recurring);
+  // Prefer a focused task, then highest priority due today/overdue, then anything
+  const focused = pool.find(t => t.focus);
+  if (focused) return focused;
+  const pri = { high: 0, med: 1, low: 2 };
+  return pool
+    .filter(t => !t.due || t.due <= today)
+    .sort((a, b) => (pri[a.priority]||1) - (pri[b.priority]||1))[0] || pool[0];
+}
+
+function addCapturedTask(text, plan) {
   const parsed = parseCapture(text);
   const t = {
     id: uid(),
@@ -3199,16 +3469,15 @@ function parseHashCapture() {
   };
   state.tasks.unshift(t);
   save();
-  history.replaceState(null, "", location.pathname);
   showCaptureBanner(t, plan);
   render();
   if (plan) {
     setTimeout(() => {
       openAiBridge();
-      // Pre-fill seed into the prompt-readonly textarea is moot — easier: pop a toast.
       toast("AI Bridge open — your note is in Inbox; describe it in the prompt's 'What to plan' line.");
     }, 250);
   }
+  return t;
 }
 function showCaptureBanner(t, viaPlan) {
   const host = document.getElementById("capture-banner-host");
@@ -3233,9 +3502,270 @@ function openSiriModal() {
   const urls = siriUrls();
   document.getElementById("siri-url-capture").value = urls.capture;
   document.getElementById("siri-url-plan").value = urls.plan;
+  document.getElementById("siri-app-url").textContent = urls.app;
+  // Render the extra action shortcuts list
+  const host = document.getElementById("siri-actions");
+  if (host) {
+    const actions = [
+      { name: "Plan my day",        url: urls.dailyplan, desc: "Opens the 3-step daily plan ritual" },
+      { name: "Focus now",          url: urls.focus,     desc: "Jumps into full-screen Focus Mode on your top task" },
+      { name: "Voice task",         url: urls.voice,     desc: "Opens in-app voice capture" },
+      { name: "My insights",        url: urls.insights,  desc: "Opens your productivity insights" },
+      { name: "Energy high / med / low", url: urls.moodHigh, desc: "Log energy (3 separate shortcuts: " + urls.moodHigh + " · " + urls.moodMed + " · " + urls.moodLow + ")" },
+    ];
+    host.innerHTML = actions.map((a, i) => `
+      <div style="margin-bottom: 10px;">
+        <div style="font-size: 12.5px; font-weight: 600;">${escapeHtml(a.name)}</div>
+        <div class="small muted" style="margin: 2px 0 4px;">${a.desc}</div>
+        <textarea readonly rows="1" data-siri-action="${i}" style="font-family: ui-monospace, Menlo, monospace; font-size: 10.5px;">${escapeHtml(a.url)}</textarea>
+      </div>
+    `).join("");
+  }
   document.getElementById("siri-modal").classList.add("show");
 }
 function closeSiriModal() { document.getElementById("siri-modal").classList.remove("show"); }
+
+/* ===========================================================
+   PWA / iOS HOME-SCREEN SUPPORT
+   - Generate a raster apple-touch-icon at runtime (canvas → PNG)
+   - Inject a web manifest via Blob URL (Android/Chrome installability)
+   - Tag <body> when running standalone so we can pad for the notch
+   =========================================================== */
+function installAppIcon() {
+  try {
+    const size = 180;
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const x = c.getContext("2d");
+    // Rounded purple square
+    const r = 40;
+    x.fillStyle = "#7c5cff";
+    x.beginPath();
+    x.moveTo(r, 0); x.arcTo(size, 0, size, size, r); x.arcTo(size, size, 0, size, r);
+    x.arcTo(0, size, 0, 0, r); x.arcTo(0, 0, size, 0, r); x.closePath(); x.fill();
+    // White check mark
+    x.strokeStyle = "#fff"; x.lineWidth = 16; x.lineCap = "round"; x.lineJoin = "round";
+    x.beginPath();
+    x.moveTo(size*0.28, size*0.52);
+    x.lineTo(size*0.44, size*0.68);
+    x.lineTo(size*0.74, size*0.34);
+    x.stroke();
+    const dataUrl = c.toDataURL("image/png");
+    const link = document.getElementById("apple-touch-icon");
+    if (link) link.setAttribute("href", dataUrl);
+    return dataUrl;
+  } catch (e) { console.warn("Icon gen failed:", e); return null; }
+}
+function installManifest(iconUrl) {
+  try {
+    const manifest = {
+      name: "Focus Deck",
+      short_name: "Focus Deck",
+      description: "ADHD-friendly daily command center",
+      start_url: location.pathname,
+      scope: location.pathname,
+      display: "standalone",
+      orientation: "portrait",
+      background_color: "#0a0c10",
+      theme_color: "#0b0d12",
+      icons: iconUrl ? [
+        { src: iconUrl, sizes: "180x180", type: "image/png", purpose: "any maskable" }
+      ] : [],
+    };
+    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = url;
+    document.head.appendChild(link);
+  } catch (e) { console.warn("Manifest gen failed:", e); }
+}
+function detectStandalone() {
+  const standalone = window.navigator.standalone === true ||
+    (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches);
+  if (standalone) document.body.classList.add("standalone");
+}
+function initPWA() {
+  const icon = installAppIcon();
+  installManifest(icon);
+  detectStandalone();
+}
+
+/* ===========================================================
+   VOICE CAPTURE — Web Speech API (in-app dictation)
+   =========================================================== */
+let _recog = null, _recogActive = false, _voiceFinal = "";
+function speechSupported() {
+  return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+}
+function openVoiceCapture() {
+  _voiceFinal = "";
+  const tEl = document.getElementById("voice-transcript");
+  tEl.innerHTML = `<span class="placeholder">Your words will appear here…</span>`;
+  document.getElementById("voice-add").disabled = true;
+  document.getElementById("voice-ramble").checked = false;
+  const help = document.getElementById("voice-help");
+  const status = document.getElementById("voice-status");
+  if (!speechSupported()) {
+    help.innerHTML = `Your browser doesn't support in-app voice. On iPhone, use the <strong>Siri shortcut</strong> instead (📱 Siri setup) — say "Hey Siri, Focus Deck" and dictate. You can still type below.`;
+    status.textContent = "In-app mic unavailable — use Siri or type";
+    document.getElementById("voice-orb").style.opacity = ".4";
+  } else {
+    document.getElementById("voice-orb").style.opacity = "1";
+    status.textContent = "Tap the orb to start";
+  }
+  document.getElementById("voice-modal").classList.add("show");
+}
+function closeVoiceCapture() {
+  stopVoice();
+  document.getElementById("voice-modal").classList.remove("show");
+}
+function startVoice() {
+  if (!speechSupported()) { toast("In-app voice not supported — use Siri."); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  _recog = new SR();
+  _recog.continuous = true;
+  _recog.interimResults = true;
+  _recog.lang = navigator.language || "en-US";
+  _recogActive = true;
+  document.getElementById("voice-orb").classList.add("listening");
+  document.getElementById("voice-status").textContent = "Listening… tap orb to stop";
+  _recog.onresult = (ev) => {
+    let interim = "";
+    for (let i = ev.resultIndex; i < ev.results.length; i++) {
+      const r = ev.results[i];
+      if (r.isFinal) _voiceFinal += r[0].transcript + " ";
+      else interim += r[0].transcript;
+    }
+    const tEl = document.getElementById("voice-transcript");
+    tEl.innerHTML = escapeHtml(_voiceFinal) + `<span class="interim">${escapeHtml(interim)}</span>`;
+    document.getElementById("voice-add").disabled = !(_voiceFinal.trim() || interim.trim());
+  };
+  _recog.onerror = (e) => {
+    document.getElementById("voice-status").textContent = "Mic error: " + (e.error || "unknown");
+    stopVoice();
+  };
+  _recog.onend = () => {
+    _recogActive = false;
+    document.getElementById("voice-orb").classList.remove("listening");
+    if (_voiceFinal.trim()) document.getElementById("voice-status").textContent = "Done — review and Add";
+  };
+  try { _recog.start(); }
+  catch (e) { console.warn(e); }
+}
+function stopVoice() {
+  _recogActive = false;
+  document.getElementById("voice-orb").classList.remove("listening");
+  if (_recog) { try { _recog.stop(); } catch {} }
+}
+function toggleVoice() {
+  if (_recogActive) stopVoice(); else startVoice();
+}
+function voiceAddTasks() {
+  const text = _voiceFinal.trim();
+  if (!text) { toast("Nothing captured yet."); return; }
+  const ramble = document.getElementById("voice-ramble").checked;
+  let added = 0;
+  if (ramble) {
+    // Split into sentences / "and then" chunks
+    const chunks = text.split(/(?:[.!?]+|\b(?:and then|then|also|next|after that)\b)/i)
+      .map(s => s.trim()).filter(s => s.length > 1);
+    chunks.forEach(c => { addCapturedTask(c, false); added++; });
+  } else {
+    addCapturedTask(text, false);
+    added = 1;
+  }
+  closeVoiceCapture();
+  toast(`Added ${added} task${added===1?"":"s"} from voice`);
+}
+function voiceSendToAi() {
+  const text = _voiceFinal.trim();
+  if (!text) { toast("Nothing captured yet."); return; }
+  // Drop it in inbox then open AI Bridge for organizing
+  addCapturedTask(text, false);
+  closeVoiceCapture();
+  setTimeout(() => {
+    openAiBridge();
+    toast("Voice note added to Inbox — describe it in the AI prompt's 'What to plan' line.");
+  }, 200);
+}
+
+/* ===========================================================
+   INSIGHTS — completion trends + mood/energy correlation
+   =========================================================== */
+function openInsights() {
+  renderInsights();
+  document.getElementById("insights-modal").classList.add("show");
+}
+function closeInsights() { document.getElementById("insights-modal").classList.remove("show"); }
+function renderInsights() {
+  const log = state.completionLog || [];
+  const today = todayISO();
+  // --- top stats ---
+  const totalDone = log.length;
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 6);
+  const weekISO = weekAgo.toISOString().slice(0,10);
+  const thisWeek = log.filter(e => e.date >= weekISO).length;
+  const streak = state.settings.streak || 0;
+  document.getElementById("insights-stats").innerHTML = `
+    <div class="insights-stat"><div class="num">${streak}</div><div class="lbl">day streak 🔥</div></div>
+    <div class="insights-stat"><div class="num">${thisWeek}</div><div class="lbl">done this week</div></div>
+    <div class="insights-stat"><div class="num">${totalDone}</div><div class="lbl">done all-time</div></div>
+  `;
+  // --- 14-day bar chart ---
+  const days = [];
+  for (let i = 13; i >= 0; i--) {
+    const d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - i);
+    const iso = d.toISOString().slice(0,10);
+    days.push({ iso, count: log.filter(e => e.date === iso).length,
+                lbl: d.toLocaleDateString(undefined, { weekday: "narrow" }) });
+  }
+  const max = Math.max(1, ...days.map(d => d.count));
+  document.getElementById("insights-chart").innerHTML = days.map(d => `
+    <div class="bar-col">
+      ${d.count ? `<div class="bar-val">${d.count}</div>` : ""}
+      <div class="bar ${d.iso===today?"today":""}" style="height: ${Math.round(d.count/max*100)}%"></div>
+      <div class="bar-lbl">${d.lbl}</div>
+    </div>
+  `).join("");
+  // --- energy correlation: avg completions on days of each energy ---
+  const corrHost = document.getElementById("insights-corr");
+  const byEnergy = { high: {}, med: {}, low: {} };
+  log.forEach(e => {
+    if (!e.dayEnergy || !byEnergy[e.dayEnergy]) return;
+    byEnergy[e.dayEnergy][e.date] = (byEnergy[e.dayEnergy][e.date] || 0) + 1;
+  });
+  const avg = {};
+  ["high","med","low"].forEach(k => {
+    const days = Object.values(byEnergy[k]);
+    avg[k] = days.length ? (days.reduce((a,b)=>a+b,0) / days.length) : 0;
+  });
+  const maxAvg = Math.max(0.01, avg.high, avg.med, avg.low);
+  const hasCorr = (avg.high + avg.med + avg.low) > 0;
+  if (hasCorr) {
+    corrHost.innerHTML = [
+      { k:"high", l:"🔥 Deep days" }, { k:"med", l:"⚡ Light days" }, { k:"low", l:"🪫 Foggy days" }
+    ].map(o => `
+      <div class="corr-row">
+        <span class="corr-lbl">${o.l}</span>
+        <span class="corr-bar-wrap"><span class="corr-bar-fill" style="width:${Math.round(avg[o.k]/maxAvg*100)}%"></span></span>
+        <span class="corr-num">${avg[o.k].toFixed(1)}</span>
+      </div>`).join("") +
+      `<div class="small muted" style="margin-top:6px;">Avg tasks completed per day, grouped by the energy you logged that morning.</div>`;
+    document.getElementById("insights-corr-host").style.display = "";
+  } else {
+    document.getElementById("insights-corr-host").style.display = "none";
+  }
+  // --- mood note ---
+  const moods = log.filter(e => e.mood);
+  const moodEl = document.getElementById("insights-mood");
+  if (moods.length >= 3) {
+    const goodPct = Math.round(moods.filter(e => e.mood === 3).length / moods.length * 100);
+    moodEl.textContent = `You rated ${moods.length} completions — ${goodPct}% felt energizing. Stack more of those early in the day.`;
+  } else {
+    moodEl.textContent = "Tap a mood after completing tasks to unlock how different work feels to you over time.";
+  }
+}
 
 /* ---------- timer ---------- */
 let timer = { remaining: 25*60, running: false, interval: null };
@@ -3756,6 +4286,8 @@ document.getElementById("ai-bridge-close").onclick = closeAiBridge;
 document.getElementById("nav-ai-bridge").onclick = () => { closeMenu(); openAiBridge(); };
 document.getElementById("nav-siri").onclick = () => { closeMenu(); openSiriModal(); };
 document.getElementById("nav-daily-plan").onclick = () => { closeMenu(); openDailyPlan(); };
+document.getElementById("nav-voice").onclick = () => { closeMenu(); openVoiceCapture(); };
+document.getElementById("nav-insights").onclick = () => { closeMenu(); openInsights(); };
 
 /* Daily Plan wiring */
 document.getElementById("dp-snooze").onclick = snoozeDailyPlan;
@@ -3774,6 +4306,41 @@ document.getElementById("siri-copy-plan").onclick = async () => {
   const ok = await copyText(document.getElementById("siri-url-plan").value);
   if (ok) toast("Plan URL copied"); else toast("Copy failed — select text manually");
 };
+document.getElementById("siri-copy-appurl").onclick = async () => {
+  const ok = await copyText(siriUrls().app);
+  if (ok) toast("App URL copied"); else toast("Copy failed — select text manually");
+};
+document.getElementById("siri-actions").addEventListener("click", async (e) => {
+  const ta = e.target.closest("[data-siri-action]");
+  if (ta) { const ok = await copyText(ta.value); if (ok) toast("Shortcut URL copied"); }
+});
+
+/* Voice capture wiring */
+document.getElementById("voice-btn").onclick = openVoiceCapture;
+document.getElementById("voice-orb").onclick = toggleVoice;
+document.getElementById("voice-cancel").onclick = closeVoiceCapture;
+document.getElementById("voice-add").onclick = voiceAddTasks;
+document.getElementById("voice-toai").onclick = voiceSendToAi;
+document.getElementById("voice-modal").addEventListener("click", e => {
+  if (e.target.id === "voice-modal") closeVoiceCapture();
+});
+
+/* Insights wiring */
+document.getElementById("insights-close").onclick = closeInsights;
+document.getElementById("insights-modal").addEventListener("click", e => {
+  if (e.target.id === "insights-modal") closeInsights();
+});
+
+/* Mood ping wiring */
+document.querySelectorAll("#mood-ping [data-mp]").forEach(b => {
+  b.onclick = () => {
+    const el = document.getElementById("mood-ping");
+    logCompletionMood(el.dataset.taskId, +b.dataset.mp);
+    el.classList.remove("show");
+    toast("Logged — thanks 💜");
+  };
+});
+document.getElementById("mp-dismiss").onclick = () => document.getElementById("mood-ping").classList.remove("show");
 
 /* Focus mode wiring */
 document.getElementById("fm-back").onclick = closeFocusMode;
@@ -3917,6 +4484,7 @@ document.getElementById("show-done").addEventListener("change", e => { state.set
 document.getElementById("setting-autoroll").addEventListener("change", e => { state.settings.autoRoll = e.target.checked; save(); });
 document.getElementById("setting-commsbump").addEventListener("change", e => { state.settings.commsAutoBump = e.target.checked; save(); });
 document.getElementById("setting-dailyplan").addEventListener("change", e => { state.settings.dailyPlanEnabled = e.target.checked; save(); });
+document.getElementById("setting-moodping").addEventListener("change", e => { state.settings.askMoodOnComplete = e.target.checked; save(); });
 document.getElementById("req-notify").onclick = async () => {
   if (!("Notification" in window)) return toast("This browser does not support notifications.");
   const p = await Notification.requestPermission();
@@ -3968,6 +4536,7 @@ document.getElementById("show-done").value = state.settings.showDone || "hide";
 document.getElementById("setting-autoroll").checked = state.settings.autoRoll !== false;
 document.getElementById("setting-commsbump").checked = state.settings.commsAutoBump !== false;
 document.getElementById("setting-dailyplan").checked = state.settings.dailyPlanEnabled !== false;
+document.getElementById("setting-moodping").checked = state.settings.askMoodOnComplete !== false;
 if ("Notification" in window) document.getElementById("notify-status").textContent = "Status: " + Notification.permission;
 
 /* Roll forward routines that completed yesterday or earlier */
@@ -3989,12 +4558,14 @@ if ("Notification" in window) document.getElementById("notify-status").textConte
   if (changed) save();
 })();
 
+initPWA();
 resetTimer();
 runDailySweeps();
+const _arrivedViaHash = !!location.hash;
 render();
 parseHashCapture();
 window.addEventListener("hashchange", parseHashCapture);
-if (shouldShowDailyPlan()) {
+if (shouldShowDailyPlan() && !_arrivedViaHash) {
   setTimeout(openDailyPlan, 150);
 }
 setInterval(checkDueReminders, 1000 * 60 * 5);
