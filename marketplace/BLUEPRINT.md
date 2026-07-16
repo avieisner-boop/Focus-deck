@@ -10,6 +10,16 @@
 
 ---
 
+## 0. The pitch in one line
+
+**Turn inquiry-based, relationship-hidden markets into selectable catalogs — without exposing
+the relationships.** In broker-driven markets today (wholesale, closeouts, freight, lending,
+insurance) a buyer *inquires* and waits while a broker shops their private contacts opaquely.
+Here the broker's relationships are pre-provisioned onto a shelf: the buyer **selects** from
+live, priced, in-stock options — and the broker's source stays protected the whole time. That
+"select, don't inquire" inversion is the product; everything below exists to make it safe for
+the people whose relationships are the inventory.
+
 ## 1. The core idea in one paragraph
 
 Sellers list goods/services but **nobody can see or buy anything without being approved** by
@@ -93,6 +103,15 @@ the buyer picks. Two brokers reselling the same seller's lot compete on price/te
 
 Derived listings can chain (broker-of-broker) — cap chain depth at 2 initially to keep margin
 stacks and dispute chains sane.
+
+**Full-catalog syndication ("provide all through broker"):** instead of the broker deriving
+listings one by one, a seller can grant a broker *catalog-wide* syndication on the relationship
+edge. The broker sets a markup rule once (e.g., cost + 30%, or a per-category table) and every
+current and future source listing auto-derives into their storefront — new seller inventory
+appears on the broker's shelf the moment it's listed, still masked, still routed through the
+broker as counterparty. This is what makes a well-connected broker's storefront feel *fully
+stocked* on day one, and it's why buyers can select instead of inquire: the broker's
+relationships are provisioned as a live catalog, not a rolodex they query on demand.
 
 ## 5. Discovery without leaking
 
@@ -219,7 +238,60 @@ you:
 11. **Tiered subscriptions**: free + take-rate to start; Pro tiers (lower take rate, more
     sponsored slots, API access, multiple storefront aliases) once liquidity exists.
 
-## 13. Data model (entities → real schema later)
+## 13. Broker verticals — one graph, many markets
+
+The relationship graph, identity masking, relay messaging, ratings, and ads are
+**vertical-agnostic**. What changes per vertical is the *fulfillment object* (what a completed
+transaction is) and the *settlement shape* (how money moves). Design the core so `vertical` is a
+first-class field with a pluggable fulfillment workflow, and the same platform hosts all of
+these — each "a little different," all recognizably the same machine:
+
+| Vertical | Seller / Broker / Buyer | Offer object | Fulfillment | Settlement | Watch out for |
+|---|---|---|---|---|---|
+| **Wholesale goods & closeouts** (launch) | Manufacturer, liquidator / goods broker / reseller | Listing (lot or replenishable) | Shipment, POD | Escrow → split payout | Freight damage disputes; manifest accuracy |
+| **Transport / freight** (goods or vehicles) | Carrier / freight broker / shipper | Capacity or posted load | The haul, proof-of-delivery | Escrow until POD (factoring later) | FMCSA broker authority + $75k bond (US); insurance certs |
+| **Business financing** | Lender / ISO-loan broker / borrower | Term sheet (rate, amount, term) | Funding event | Commission ledger on funded deals (no escrow) | State lending & broker licensing; disclosure rules |
+| **Personal loans** | Lender / broker / consumer | Credit offer | Funding event | Commission ledger | Heaviest regulation (TILA/ECOA, adverse-action notices) — likely lead-gen only, late-stage |
+| **Insurance** | Carrier / licensed agent-broker / insured | Quote | Bound policy | Commission ledger | Per-state, per-line licensing |
+| **Miles / rewards points** | Points holder / points broker / traveler | Redemption offer | Ticket/booking issued | Escrow until issuance | Program T&Cs prohibit sale; fraud-heavy; gray-market — eyes-open, maybe never |
+
+Two things make this work with one codebase:
+
+- **Generalize `Listing` → `Offer`** with a vertical-specific payload schema, and
+  `Order` → `Request` (an order, a load tender, a credit application, a quote request). The
+  buyer-side experience is identical everywhere: *a shelf of selectable, priced options from
+  masked counterparties you've been approved into* — the inversion in §0. In lending and freight
+  today you inquire and wait; here you compare term sheets or quotes side by side, from which
+  storefront, and pick.
+- **Two settlement shapes cover everything**: escrow-and-split (physical fulfillment) and
+  commission-ledger (financial products where the platform never touches principal). Both
+  already exist in the data model (`LedgerEntry`).
+
+Sequencing: goods first (unregulated, escrow model already built), **freight second** — it's the
+same offline anonymity culture (carriers and shippers are masked from each other today, brokers
+bond-protected in the middle) *and* it composes with goods: the transport-broker vertical can
+carry the closeout orders moving on-platform, which makes each vertical the other's customer.
+Financial verticals (financing, insurance) come later behind licensing, likely as
+commission-tracked lead-gen before any origination. Points brokering only with legal eyes open.
+
+### Launch vertical: wholesale closeouts
+
+Closeouts/liquidation fit the broker model unusually well — sourcing relationships (store
+raids, overstock contacts, bankruptcy channels) *are* the business, and everyone in the chain
+already works hard to protect their source. What the goods core needs added for lots:
+
+- **Lot semantics**: one-off finite quantity (not replenishable stock), first-committed-wins,
+  time-boxed listings; auctions/best-offer windows fit naturally (§12.5).
+- **Manifests**: attachable manifest files (the standard artifact of the liquidation trade) with
+  per-line item detail; "manifested vs unmanifested" as a listing attribute that feeds pricing
+  and dispute rules.
+- **Condition grades**: new / shelf-pull / customer returns / salvage — a structured field, not
+  free text, because it drives ratings disputes.
+- **FOB / freight terms** on the listing (buyer-arranged vs delivered), which is also the
+  natural bridge into the freight vertical.
+- **All-sales-final flags** with grade-dependent dispute windows.
+
+## 14. Data model (entities → real schema later)
 
 ```
 Account          id, legalName, verified, kycStatus, createdAt
@@ -248,7 +320,7 @@ Dispute          id, orderId, openedBy, status, resolution, escrowHold
 AuditEvent       id, actorId, entity, action, before/after, at
 ```
 
-## 14. Tech roadmap
+## 15. Tech roadmap
 
 | Phase | What | Stack |
 |---|---|---|
@@ -261,14 +333,15 @@ AuditEvent       id, actorId, entity, action, before/after, at
 the relationship graph" — encoding that once, at the database layer, prevents the entire class
 of identity-leak bugs that would kill trust in a masked marketplace.
 
-## 15. Open questions to settle with real users
+## 16. Open questions to settle with real users
 
 - Take rate: flat % vs. per-role (charge the broker's margin, not the seller's base?).
 - Should sellers see the broker's resale price? (Price floor says yes at least partially.)
 - Reveal economics: free after N orders vs. paid conversion fee.
 - Who eats payment processing on multi-hop splits.
-- Category to launch with (food/bev wholesale? closeouts/liquidation? — liquidation lots fit the
-  broker model unusually well).
+- ~~Category to launch with~~ **Decided: wholesale closeouts/liquidation** (see §13) — the
+  broker model's natural home. Remaining sub-question: which closeout niche first (general
+  merchandise, apparel, electronics returns?).
 
 ---
 
