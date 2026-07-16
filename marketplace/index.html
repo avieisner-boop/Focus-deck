@@ -1,0 +1,1700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta name="theme-color" content="#0b0d12" />
+<title>TradeMesh — Broker Network Marketplace (Prototype)</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230ea5a3'/%3E%3Cpath d='M14 40l12-16 8 10 6-7 10 13' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<style>
+  /* ============ DESIGN TOKENS (Focus Deck family) ============ */
+  :root {
+    --bg: #0a0c10; --bg-soft: #11141b; --panel: #161a23; --panel-2: #1b1f2a;
+    --line: #242938; --line-soft: #1c202c;
+    --text: #ecf0f7; --text-2: #c6ccdc; --muted: #818aa1;
+    --accent: #0ea5a3; --accent-2: #5cc8ff;
+    --accent-soft: rgba(14,165,163,.12); --accent-ring: rgba(14,165,163,.30);
+    --ok: #22c55e; --warn: #f59e0b; --danger: #ef4444; --gold: #fbbf24; --violet: #8b5cf6;
+    --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.18);
+    --shadow-md: 0 2px 6px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.10);
+    --shadow-lg: 0 12px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.10);
+    --ease: cubic-bezier(.22,.61,.36,1);
+  }
+  [data-theme="light"] {
+    --bg: #f7f8fb; --bg-soft: #eef0f6; --panel: #ffffff; --panel-2: #f5f7fb;
+    --line: #e2e6ef; --line-soft: #ecedf3;
+    --text: #131722; --text-2: #3b4256; --muted: #6b7387;
+    --accent-soft: rgba(14,165,163,.10); --accent-ring: rgba(14,165,163,.22);
+    --shadow-sm: 0 1px 2px rgba(20,25,45,.06);
+    --shadow-md: 0 2px 6px rgba(20,25,45,.06), 0 1px 2px rgba(20,25,45,.04);
+    --shadow-lg: 0 10px 30px rgba(20,25,45,.10), 0 2px 8px rgba(20,25,45,.05);
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+    background:
+      radial-gradient(1000px 500px at 85% -15%, rgba(14,165,163,.10), transparent 60%),
+      radial-gradient(800px 420px at -10% 115%, rgba(92,200,255,.06), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: -0.005em;
+  }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: transparent; }
+  input, textarea, select {
+    background: var(--bg-soft); border: 1px solid var(--line); color: var(--text);
+    border-radius: var(--r-md); padding: 8px 11px; outline: none;
+    transition: border-color .15s var(--ease), box-shadow .15s var(--ease);
+  }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-ring); }
+  textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 12px; border-radius: var(--r-md);
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--text);
+    font-weight: 500; font-size: 13px; white-space: nowrap;
+    transition: background .15s var(--ease), border-color .15s var(--ease), transform .08s var(--ease);
+  }
+  .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .btn:active { transform: translateY(1px); }
+  .btn.primary { background: linear-gradient(180deg, #14b8b6 0%, #0d8f8d 100%); color: #fff; border-color: transparent; }
+  .btn.primary:hover { filter: brightness(1.08); }
+  .btn.danger { color: var(--danger); }
+  .btn.danger:hover { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.45); }
+  .btn.small { padding: 4px 9px; font-size: 12px; }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+
+  /* ============ LAYOUT ============ */
+  #topbar {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    padding: 10px 16px; border-bottom: 1px solid var(--line);
+    background: color-mix(in srgb, var(--panel) 82%, transparent);
+    backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 40;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; }
+  .brand .logo {
+    width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
+    background: linear-gradient(135deg, #14b8b6, #0d8f8d); color: #fff; font-size: 15px;
+  }
+  .brand .proto { font-size: 10px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); padding: 2px 6px; border-radius: 99px; letter-spacing: .04em; }
+  #actingas {
+    display: flex; align-items: center; gap: 8px; margin-left: auto;
+    background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 5px 10px;
+  }
+  #actingas .lbl { font-size: 11px; color: var(--muted); }
+  #actingas select { border: 0; background: transparent; padding: 2px 4px; font-weight: 600; font-size: 13px; }
+  #actingas select:focus { box-shadow: none; }
+  .rolechips { display: flex; gap: 4px; }
+
+  #shell { display: flex; min-height: calc(100vh - 56px); }
+  #sidebar {
+    width: 220px; flex-shrink: 0; padding: 14px 10px; border-right: 1px solid var(--line);
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .navlbl { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: 12px 10px 4px; }
+  .navitem {
+    display: flex; align-items: center; gap: 9px; width: 100%;
+    padding: 8px 10px; border-radius: var(--r-md); font-size: 13.5px; font-weight: 500;
+    color: var(--text-2); text-align: left;
+  }
+  .navitem:hover { background: var(--panel-2); color: var(--text); }
+  .navitem.active { background: var(--accent-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent-ring); }
+  .navitem .badge {
+    margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px;
+    background: var(--danger); color: #fff; font-size: 10.5px; font-weight: 700;
+    display: grid; place-items: center;
+  }
+  #main { flex: 1; padding: 20px 22px 60px; max-width: 1060px; min-width: 0; }
+  h1.viewtitle { font-size: 20px; margin: 0 0 4px; letter-spacing: -.02em; }
+  .viewsub { color: var(--muted); font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
+  h2.sec { font-size: 14px; font-weight: 700; margin: 26px 0 10px; display: flex; align-items: center; gap: 8px; }
+  h2.sec .count { color: var(--muted); font-weight: 500; }
+
+  /* ============ CARDS & PIECES ============ */
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-lg);
+    padding: 14px 16px; box-shadow: var(--shadow-sm); margin-bottom: 10px;
+  }
+  .prodgroup { margin-bottom: 18px; }
+  .prodhead { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .prodimg {
+    width: 52px; height: 52px; border-radius: var(--r-md); flex-shrink: 0;
+    background: var(--panel-2); border: 1px solid var(--line);
+    display: grid; place-items: center; font-size: 28px; overflow: hidden;
+  }
+  .prodimg img { width: 100%; height: 100%; object-fit: cover; }
+  .prodimg.lg { width: 64px; height: 64px; font-size: 34px; }
+  .offer {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 10px 14px; margin-bottom: 6px;
+  }
+  .offer .grow { flex: 1; min-width: 160px; }
+  .price { font-weight: 700; font-size: 16px; }
+  .price small { font-weight: 500; color: var(--muted); font-size: 11.5px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 99px;
+    font-size: 11px; font-weight: 600; border: 1px solid var(--line); color: var(--text-2);
+    background: var(--panel-2);
+  }
+  .chip.ok { color: var(--ok); border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.08); }
+  .chip.warn { color: var(--warn); border-color: rgba(245,158,11,.35); background: rgba(245,158,11,.08); }
+  .chip.danger { color: var(--danger); border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); }
+  .chip.accent { color: var(--accent); border-color: var(--accent-ring); background: var(--accent-soft); }
+  .chip.violet { color: var(--violet); border-color: rgba(139,92,246,.35); background: rgba(139,92,246,.08); }
+  .chip.gold { color: var(--gold); border-color: rgba(251,191,36,.4); background: rgba(251,191,36,.08); }
+  .stars { color: var(--gold); font-size: 12px; letter-spacing: 1px; }
+  .who { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+  .who .avatar {
+    width: 26px; height: 26px; border-radius: 8px; background: var(--panel-2);
+    border: 1px solid var(--line); display: grid; place-items: center; font-size: 14px; flex-shrink: 0;
+  }
+  .who .nm { font-weight: 600; font-size: 13px; }
+  .who .sub { font-size: 11px; color: var(--muted); }
+  .meta { font-size: 12px; color: var(--muted); }
+  .meta b { color: var(--text-2); font-weight: 600; }
+
+  .locked { position: relative; overflow: hidden; }
+  .blurred { filter: blur(5px); user-select: none; pointer-events: none; }
+  .locktag { position: absolute; top: 10px; right: 12px; font-size: 16px; }
+
+  .sponsoredstrip {
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; margin-bottom: 18px;
+  }
+  .adcard {
+    min-width: 230px; background: linear-gradient(180deg, var(--accent-soft), transparent), var(--panel);
+    border: 1px solid var(--accent-ring); border-radius: var(--r-lg); padding: 12px 14px;
+    cursor: pointer;
+  }
+
+  .timeline { list-style: none; margin: 8px 0 0; padding: 0; font-size: 12px; color: var(--muted); }
+  .timeline li { padding: 3px 0 3px 16px; position: relative; }
+  .timeline li::before { content: ''; position: absolute; left: 2px; top: 9px; width: 6px; height: 6px; border-radius: 99px; background: var(--accent); }
+
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row.between { justify-content: space-between; }
+  .stack { display: flex; flex-direction: column; gap: 4px; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 10px; }
+  .fld { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .fld label { font-size: 11.5px; font-weight: 600; color: var(--muted); }
+  .hr { border: 0; border-top: 1px solid var(--line-soft); margin: 12px 0; }
+
+  /* messages */
+  .thread { max-height: 420px; overflow-y: auto; padding: 6px 2px; }
+  .msg { max-width: 78%; margin-bottom: 8px; }
+  .msg .bubble {
+    padding: 8px 12px; border-radius: 14px; font-size: 13.5px; line-height: 1.45;
+    background: var(--panel-2); border: 1px solid var(--line);
+  }
+  .msg.mine { margin-left: auto; }
+  .msg.mine .bubble { background: var(--accent-soft); border-color: var(--accent-ring); }
+  .msg .msub { font-size: 10.5px; color: var(--muted); margin: 3px 6px 0; }
+  .msg .flag { color: var(--danger); font-size: 11px; font-weight: 600; }
+  .redacted { background: rgba(239,68,68,.12); color: var(--danger); border-radius: 4px; padding: 0 4px; font-size: 12px; font-weight: 600; }
+
+  /* modal */
+  #modalwrap {
+    position: fixed; inset: 0; background: rgba(5,8,14,.6); backdrop-filter: blur(4px);
+    display: none; place-items: center; z-index: 100; padding: 16px;
+  }
+  #modalwrap.open { display: grid; }
+  #modal {
+    width: min(560px, 100%); max-height: 88vh; overflow-y: auto;
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-xl);
+    padding: 20px 22px; box-shadow: var(--shadow-lg);
+  }
+  #modal h3 { margin: 0 0 4px; font-size: 17px; }
+  #modal .msub { color: var(--muted); font-size: 12.5px; margin: 0 0 14px; line-height: 1.5; }
+
+  /* toast */
+  #toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); z-index: 200; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+  .toast {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-md);
+    padding: 9px 16px; font-size: 13px; box-shadow: var(--shadow-lg);
+    animation: toastin .25s var(--ease);
+  }
+  @keyframes toastin { from { opacity: 0; transform: translateY(8px); } }
+
+  .empty { color: var(--muted); font-size: 13px; padding: 18px; text-align: center; border: 1px dashed var(--line); border-radius: var(--r-lg); }
+  .starpick { font-size: 26px; cursor: pointer; letter-spacing: 4px; user-select: none; }
+  .starpick span { opacity: .3; transition: opacity .1s; }
+  .starpick span.on { opacity: 1; }
+
+  .ledgerrow { display: flex; justify-content: space-between; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+  .amt.pos { color: var(--ok); font-weight: 600; }
+  .amt.neg { color: var(--danger); font-weight: 600; }
+
+  @media (max-width: 760px) {
+    #shell { flex-direction: column; }
+    #sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
+    .navlbl { display: none; }
+    .navitem { width: auto; padding: 6px 10px; font-size: 12.5px; }
+    #main { padding: 14px 12px 60px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="brand">
+    <div class="logo">◈</div> TradeMesh <span class="proto">PROTOTYPE</span>
+  </div>
+  <div id="actingas">
+    <span class="lbl">Acting as</span>
+    <select id="whoami" onchange="switchAccount(this.value)"></select>
+    <span class="rolechips" id="rolechips"></span>
+  </div>
+  <button class="btn small" onclick="openIntro()" title="How it works">❓ Guide</button>
+  <button class="btn small" onclick="toggleTheme()" title="Theme">◐</button>
+  <button class="btn small danger" onclick="resetDemo()" title="Reset demo data">↺ Reset</button>
+</div>
+
+<div id="shell">
+  <aside id="sidebar"></aside>
+  <main id="main"></main>
+</div>
+
+<div id="modalwrap" onclick="if(event.target===this) closeModal()"><div id="modal"></div></div>
+<div id="toasts"></div>
+
+<script>
+/* =====================================================================
+   TradeMesh — broker-network marketplace prototype.
+   Single file, no backend. All "server" logic is simulated client-side;
+   the point is to pressure-test the relationship-graph mechanics:
+   masked identities, approval gating, broker re-listing, order routing,
+   escrow splits, relay messaging, ratings, sponsored listings.
+   Sections: STATE / SEED, GRAPH HELPERS, RENDER, VIEWS, ACTIONS, MODALS.
+   ===================================================================== */
+
+const LS_KEY = 'trademesh.v1';
+const PLATFORM_FEE = 0.03; // take rate on the retail hop
+
+/* ============ STATE / SEED ============ */
+
+let _uid = 100;
+function uid(p) { return p + '_' + (++_uid) + Math.random().toString(36).slice(2, 6); }
+const now = () => Date.now();
+const DAY = 86400000;
+
+function seed() {
+  const t0 = now() - 9 * DAY;
+  return {
+    v: 1,
+    uidBase: 100,
+    accounts: [
+      { id: 'a_atlas',    name: 'Atlas Foods LLC',     roles: ['seller'],           alias: 'Golden Harvest Wholesale', tagline: 'Mediterranean pantry staples, importer-direct', avatar: '🫒', verified: true },
+      { id: 'a_meridian', name: 'Meridian Textiles',   roles: ['seller'],           alias: 'Loom & Thread Supply',     tagline: 'Woven goods, mill-direct',                      avatar: '🧵', verified: true },
+      { id: 'a_pacific',  name: 'Pacific Goods Inc',   roles: ['seller', 'broker'], alias: 'Pacific Trade Partners',   tagline: 'Specialty food & bev sourcing',                 avatar: '🌊', verified: true, autoRoute: false },
+      { id: 'a_nexus',    name: 'Nexus Trading',       roles: ['broker'],           alias: 'Nexus Sourcing Group',     tagline: 'Small-format wholesale, broken-case specialist', avatar: '🔗', verified: true, autoRoute: true },
+      { id: 'a_sam',      name: "Sam's Corner Market", roles: ['buyer'],            alias: 'Neighborhood Grocer #2214', tagline: '', avatar: '🛒', verified: true },
+      { id: 'a_river',    name: 'Riverside Deli',      roles: ['buyer'],            alias: 'Riverside Deli Co',        tagline: '', avatar: '🥪', verified: true },
+    ],
+    products: [
+      { id: 'p_oil',    ownerId: 'a_atlas',    name: 'Organic Extra-Virgin Olive Oil 1L', category: 'Food & Beverage', img: '🫒', baseUnit: 'bottle', desc: 'Cold-pressed, single-estate, current harvest. 12-bottle inner cases.' },
+      { id: 'p_tom',    ownerId: 'a_atlas',    name: 'San Marzano Crushed Tomatoes 28oz', category: 'Food & Beverage', img: '🍅', baseUnit: 'can',    desc: 'DOP-certified, 24-can inner cases.' },
+      { id: 'p_towel',  ownerId: 'a_meridian', name: 'Turkish Cotton Bath Towels',        category: 'Textiles',        img: '🧵', baseUnit: 'towel',  desc: '600 GSM, hotel grade, white.' },
+      { id: 'p_coffee', ownerId: 'a_pacific',  name: 'Single-Origin Arabica Beans 1kg',   category: 'Food & Beverage', img: '☕', baseUnit: 'bag',    desc: 'Huila, Colombia. Medium roast, whole bean.' },
+    ],
+    listings: [
+      // source listings (seller channels)
+      { id: 'l_oil_src', ownerId: 'a_atlas',    productId: 'p_oil',    sourceId: null, unit: 'pallet', unitContains: 720,  price: 2880, moq: 1,  stock: 14,  active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_tom_src', ownerId: 'a_atlas',    productId: 'p_tom',    sourceId: null, unit: 'pallet', unitContains: 1536, price: 2304, moq: 1,  stock: 9,   active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_twl_src', ownerId: 'a_meridian', productId: 'p_towel',  sourceId: null, unit: 'carton', unitContains: 48,   price: 336,  moq: 5,  stock: 120, active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_cof_src', ownerId: 'a_pacific',  productId: 'p_coffee', sourceId: null, unit: 'pallet', unitContains: 100,  price: 950,  moq: 1,  stock: 22,  active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      // derived listings (broker channels)
+      { id: 'l_oil_nx', ownerId: 'a_nexus',   productId: 'p_oil', sourceId: 'l_oil_src', unit: 'case', unitContains: 12, price: 69, moq: 5,  heldStock: 40, active: true, negotiable: true, teaser: true, sponsored: true,  adStats: { imp: 132, clicks: 9 } },
+      { id: 'l_oil_pc', ownerId: 'a_pacific', productId: 'p_oil', sourceId: 'l_oil_src', unit: 'case', unitContains: 12, price: 66, moq: 10, heldStock: 0,  active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_tom_nx', ownerId: 'a_nexus',   productId: 'p_tom', sourceId: 'l_tom_src', unit: 'case', unitContains: 24, price: 44, moq: 10, heldStock: 54, active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } },
+    ],
+    rels: [
+      // seller → broker
+      { id: 'r1', grantorId: 'a_atlas',    granteeId: 'a_nexus',   kind: 'broker', status: 'approved', requestedBy: 'a_nexus',   terms: { comm: 'relay',  reveal: false, priceFloor: 5,    minVolume: '1 pallet upstream' } },
+      { id: 'r2', grantorId: 'a_atlas',    granteeId: 'a_pacific', kind: 'broker', status: 'approved', requestedBy: 'a_pacific', terms: { comm: 'direct', reveal: true,  priceFloor: 5,    minVolume: '' } },
+      { id: 'r3', grantorId: 'a_meridian', granteeId: 'a_nexus',   kind: 'broker', status: 'pending',  requestedBy: 'a_nexus',   terms: { comm: 'relay',  reveal: false, priceFloor: null, minVolume: '' } },
+      // channel → buyer
+      { id: 'r4', grantorId: 'a_atlas',    granteeId: 'a_river', kind: 'buyer', status: 'approved', requestedBy: 'a_atlas',  terms: { comm: 'direct', reveal: false, priceFloor: null, minVolume: '' } },
+      { id: 'r5', grantorId: 'a_meridian', granteeId: 'a_river', kind: 'buyer', status: 'approved', requestedBy: 'a_river',  terms: { comm: 'direct', reveal: false, priceFloor: null, minVolume: '' } },
+      { id: 'r6', grantorId: 'a_nexus',    granteeId: 'a_sam',   kind: 'buyer', status: 'approved', requestedBy: 'a_nexus',  terms: { comm: 'relay',  reveal: false, priceFloor: null, minVolume: '' } },
+      { id: 'r7', grantorId: 'a_pacific',  granteeId: 'a_sam',   kind: 'buyer', status: 'approved', requestedBy: 'a_sam',    terms: { comm: 'relay',  reveal: false, priceFloor: null, minVolume: '' } },
+    ],
+    negotiations: [
+      { id: 'n1', listingId: 'l_oil_nx', buyerId: 'a_sam', status: 'countered', qty: 20, price: 65,
+        history: [
+          { by: 'a_sam',   qty: 20, price: 62, note: 'Standing weekly order if the price works.', at: t0 + 6 * DAY },
+          { by: 'a_nexus', qty: 20, price: 65, note: 'Best I can do at this volume — can hold it for 30 days.', at: t0 + 6.2 * DAY },
+        ] },
+    ],
+    orders: [
+      // completed direct order (gives Atlas a rating history)
+      { id: 'o1', buyerId: 'a_river', ownerId: 'a_atlas', listingId: 'l_oil_src', qty: 1, unitPrice: 2880, total: 2880,
+        status: 'delivered', upstreamId: null, downstreamId: null, fulfilledFromStock: false,
+        ratedByBuyer: true, ratedByOwner: true,
+        timeline: [
+          { at: t0,            text: 'Order placed — $2,880.00 paid into escrow' },
+          { at: t0 + .2 * DAY, text: 'Confirmed by seller' },
+          { at: t0 + 1 * DAY,  text: 'Shipped (freight, 1 pallet)' },
+          { at: t0 + 3 * DAY,  text: 'Delivery confirmed by buyer — escrow released' },
+        ] },
+      // in-flight routed order: Sam → Nexus (auto-routed to Atlas as upstream PO o3)
+      { id: 'o2', buyerId: 'a_sam', ownerId: 'a_nexus', listingId: 'l_tom_nx', qty: 10, unitPrice: 44, total: 440,
+        status: 'routed', upstreamId: 'o3', downstreamId: null, fulfilledFromStock: false,
+        ratedByBuyer: false, ratedByOwner: false,
+        timeline: [
+          { at: t0 + 8 * DAY,   text: 'Order placed — $440.00 paid into escrow' },
+          { at: t0 + 8.01 * DAY, text: 'Auto-routed: upstream PO sent to supplier' },
+        ] },
+      { id: 'o3', buyerId: 'a_nexus', ownerId: 'a_atlas', listingId: 'l_tom_src', qty: 1, unitPrice: 2304, total: 2304,
+        status: 'placed', upstreamId: null, downstreamId: 'o2', fulfilledFromStock: false,
+        ratedByBuyer: false, ratedByOwner: false,
+        timeline: [
+          { at: t0 + 8.01 * DAY, text: 'Upstream PO created for downstream order #o2 — $2,304.00 in escrow' },
+        ] },
+    ],
+    ledger: [
+      { id: 'lg1', orderId: 'o1', accountId: 'a_river', type: 'escrow_out', amount: -2880,   note: 'Payment into escrow · order o1', at: t0 },
+      { id: 'lg2', orderId: 'o1', accountId: 'a_atlas', type: 'payout',     amount: 2793.60, note: 'Escrow release · order o1 (net of 3% platform fee)', at: t0 + 3 * DAY },
+      { id: 'lg3', orderId: 'o2', accountId: 'a_sam',   type: 'escrow_out', amount: -440,    note: 'Payment into escrow · order o2', at: t0 + 8 * DAY },
+      { id: 'lg4', orderId: 'o3', accountId: 'a_nexus', type: 'escrow_out', amount: -2304,   note: 'Upstream PO payment into escrow · order o3', at: t0 + 8.01 * DAY },
+    ],
+    threads: [
+      { id: 't1', aId: 'a_sam', bId: 'a_nexus', relay: true, contextLabel: 'Organic Extra-Virgin Olive Oil 1L', linkedThreadId: 't2',
+        messages: [
+          { from: 'a_sam',   text: 'Is this the current harvest? Also can you do weekly delivery — call me at [contact info removed] to set it up.', flagged: true,  at: t0 + 5 * DAY },
+          { from: 'a_nexus', text: 'Checking with the supplier on harvest date. Weekly delivery is doable — but let’s keep it on-platform, contact sharing gets flagged.', flagged: false, at: t0 + 5.1 * DAY },
+        ] },
+      { id: 't2', aId: 'a_nexus', bId: 'a_atlas', relay: false, contextLabel: 'Organic Extra-Virgin Olive Oil 1L', linkedThreadId: 't1',
+        messages: [
+          { from: 'a_nexus', text: '⇪ Relayed from my buyer: “Is this the current harvest?”', flagged: false, at: t0 + 5.2 * DAY, relayed: true },
+          { from: 'a_atlas', text: 'Yes — November pressing, best-by 24 months out.', flagged: false, at: t0 + 5.4 * DAY },
+        ] },
+    ],
+    reviews: [
+      { id: 'rv1', orderId: 'o1', raterId: 'a_river', targetId: 'a_atlas', asRole: 'counterparty', stars: 5, text: 'Exactly as listed, fast freight.', at: t0 + 3 * DAY },
+      { id: 'rv2', orderId: 'o1', raterId: 'a_atlas', targetId: 'a_river', asRole: 'buyer',        stars: 5, text: 'Paid instantly, easy to work with.', at: t0 + 3 * DAY },
+    ],
+    invites: [],
+    session: { actingAs: 'a_sam', view: 'market', openThread: null, theme: 'dark', seenIntro: false },
+  };
+}
+
+let state = load();
+function load() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) { const s = JSON.parse(raw); _uid = s.uidBase || 500; return s; }
+  } catch (e) {}
+  return seed();
+}
+function save() { state.uidBase = _uid; localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+function resetDemo() {
+  if (!confirm('Reset all demo data back to the seed scenario?')) return;
+  localStorage.removeItem(LS_KEY); state = seed(); save(); render();
+  toast('Demo reset');
+}
+
+/* ============ GRAPH HELPERS ============ */
+
+const acc     = id => state.accounts.find(a => a.id === id);
+const product = id => state.products.find(p => p.id === id);
+const listing = id => state.listings.find(l => l.id === id);
+const order   = id => state.orders.find(o => o.id === id);
+const me      = () => acc(state.session.actingAs);
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function money(n) { return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function ago(t) {
+  const d = now() - t;
+  if (d < 3600000) return Math.max(1, Math.round(d / 60000)) + 'm ago';
+  if (d < DAY) return Math.round(d / 3600000) + 'h ago';
+  return Math.round(d / DAY) + 'd ago';
+}
+
+// relationship lookup (any status)
+function rel(grantorId, granteeId, kind) {
+  return state.rels.find(r => r.grantorId === grantorId && r.granteeId === granteeId && r.kind === kind && r.status !== 'revoked');
+}
+function approved(grantorId, granteeId, kind) {
+  const r = rel(grantorId, granteeId, kind);
+  return r && r.status === 'approved' ? r : null;
+}
+
+// Is real identity revealed between these two accounts?
+// Reveal is a term on any approved edge between them, either direction.
+function revealed(idA, idB) {
+  return state.rels.some(r => r.status === 'approved' && r.terms.reveal &&
+    ((r.grantorId === idA && r.granteeId === idB) || (r.grantorId === idB && r.granteeId === idA)));
+}
+
+// rating of an account's storefront (all roles) → {avg, count}
+function ratingOf(accountId) {
+  const rs = state.reviews.filter(r => r.targetId === accountId);
+  if (!rs.length) return { avg: null, count: 0 };
+  return { avg: rs.reduce((s, r) => s + r.stars, 0) / rs.length, count: rs.length };
+}
+function starsHtml(accountId) {
+  const { avg, count } = ratingOf(accountId);
+  if (!avg) return '<span class="meta">no ratings yet</span>';
+  return `<span class="stars">★</span> <b style="font-size:12px">${avg.toFixed(1)}</b> <span class="meta">(${count})</span>`;
+}
+
+// Masked-identity renderer. Viewers see the storefront alias unless
+// they ARE the account or an approved edge has reveal=true.
+function who(accountId, opts = {}) {
+  const a = acc(accountId); if (!a) return '?';
+  const viewer = me();
+  const self = viewer.id === accountId;
+  const show = self || revealed(viewer.id, accountId);
+  const name = show ? a.name : a.alias;
+  const sub = self ? 'you · ' + a.alias
+            : show ? 'identity revealed · trades as “' + a.alias + '”'
+            : (a.verified ? 'Verified business · identity masked' : 'identity masked');
+  return `<span class="who"><span class="avatar">${a.avatar}</span><span class="stack" style="gap:0">
+    <span class="nm">${esc(name)}</span>
+    ${opts.nosub ? '' : `<span class="sub">${esc(sub)}${opts.stars === false ? '' : ' · '}</span>`}
+  </span>${opts.stars === false ? '' : starsHtml(accountId)}</span>`;
+}
+
+// channels (accounts) that have approved this buyer
+function myChannels(buyerId) {
+  return state.rels.filter(r => r.kind === 'buyer' && r.granteeId === buyerId && r.status === 'approved').map(r => r.grantorId);
+}
+// listings a buyer can actually buy
+function visibleListings(buyerId) {
+  const ch = myChannels(buyerId);
+  return state.listings.filter(l => l.active && ch.includes(l.ownerId) && l.ownerId !== buyerId);
+}
+// teaser listings: visible-as-locked to this buyer
+function teaserListings(buyerId) {
+  const ch = myChannels(buyerId);
+  return state.listings.filter(l => l.active && l.teaser && !ch.includes(l.ownerId) && l.ownerId !== buyerId);
+}
+// derived-listing economics
+function sourceOf(l) { return l.sourceId ? listing(l.sourceId) : null; }
+function costBasisPerUnit(l) {
+  const s = sourceOf(l); if (!s) return null;
+  return (s.price / s.unitContains) * l.unitContains;
+}
+function availableUnits(l) {
+  const s = sourceOf(l);
+  if (!s) return l.stock;
+  return (l.heldStock || 0) + Math.floor((s.stock * s.unitContains) / l.unitContains);
+}
+function pricePerBase(l) { return l.price / l.unitContains; }
+
+// accepted negotiation for buyer+listing, if any
+function acceptedNego(buyerId, listingId) {
+  return state.negotiations.find(n => n.buyerId === buyerId && n.listingId === listingId && n.status === 'accepted');
+}
+
+// Upwork-style contact filter
+function maskContacts(text) {
+  let flagged = false;
+  let out = text
+    .replace(/[\w.+-]+@[\w-]+\.[\w.-]+/g, () => { flagged = true; return '[contact info removed]'; })
+    .replace(/(https?:\/\/|www\.)\S+/gi,   () => { flagged = true; return '[link removed]'; })
+    .replace(/\+?\d[\d\s().-]{7,}\d/g,     () => { flagged = true; return '[contact info removed]'; });
+  return { text: out, flagged };
+}
+function renderMsgText(t) {
+  return esc(t).replace(/\[contact info removed\]|\[link removed\]/g, m => `<span class="redacted">${m}</span>`);
+}
+
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+/* ============ NAV / RENDER CORE ============ */
+
+function navItems() {
+  const m = me(); const items = [];
+  const isB = m.roles.includes('buyer'), isS = m.roles.includes('seller'), isBr = m.roles.includes('broker');
+  if (isB) items.push({ id: 'market', icon: '🏪', label: 'Marketplace' });
+  if (isBr) items.push({ id: 'sources', icon: '🧭', label: 'Source Catalog', badge: badgeSources() });
+  if (isS) items.push({ id: 'products', icon: '📦', label: 'My Products' });
+  if (isS || isBr) items.push({ id: 'listings', icon: '🏷️', label: 'My Listings' });
+  items.push({ id: 'deals', icon: '🤝', label: 'Deals & Offers', badge: badgeDeals() });
+  items.push({ id: 'orders', icon: '🚚', label: 'Orders', badge: badgeOrders() });
+  items.push({ id: 'messages', icon: '💬', label: 'Messages' });
+  items.push({ id: 'network', icon: '🕸️', label: 'My Network', badge: badgeNetwork() });
+  items.push({ id: 'wallet', icon: '💰', label: 'Wallet' });
+  return items;
+}
+function badgeNetwork() {
+  return state.rels.filter(r => r.status === 'pending' && r.grantorId === me().id).length || null;
+}
+function badgeDeals() {
+  const m = me().id;
+  return state.negotiations.filter(n =>
+    (n.status === 'open' && listing(n.listingId) && listing(n.listingId).ownerId === m) ||
+    (n.status === 'countered' && n.buyerId === m)).length || null;
+}
+function badgeOrders() {
+  const m = me().id;
+  return state.orders.filter(o =>
+    (o.ownerId === m && (o.status === 'placed')) ||
+    (o.buyerId === m && o.status === 'shipped')).length || null;
+}
+function badgeSources() {
+  return null;
+}
+
+function render() {
+  document.documentElement.dataset.theme = state.session.theme === 'light' ? 'light' : 'dark';
+  // acting-as switcher
+  const sel = document.getElementById('whoami');
+  sel.innerHTML = state.accounts.map(a =>
+    `<option value="${a.id}" ${a.id === state.session.actingAs ? 'selected' : ''}>${a.avatar} ${esc(a.name)}</option>`).join('');
+  document.getElementById('rolechips').innerHTML =
+    me().roles.map(r => `<span class="chip ${r === 'seller' ? 'ok' : r === 'broker' ? 'violet' : 'accent'}">${r}</span>`).join('');
+  // sidebar
+  const items = navItems();
+  if (!items.some(i => i.id === state.session.view)) state.session.view = items[0].id;
+  document.getElementById('sidebar').innerHTML =
+    `<div class="navlbl">Workspace</div>` +
+    items.map(i => `<button class="navitem ${state.session.view === i.id ? 'active' : ''}" onclick="setView('${i.id}')">
+      <span>${i.icon}</span> ${i.label} ${i.badge ? `<span class="badge">${i.badge}</span>` : ''}</button>`).join('');
+  // main view
+  const views = { market: vMarket, sources: vSources, products: vProducts, listings: vListings, deals: vDeals, orders: vOrders, messages: vMessages, network: vNetwork, wallet: vWallet };
+  document.getElementById('main').innerHTML = (views[state.session.view] || vMarket)();
+  save();
+}
+function setView(v) {
+  state.session.view = v;
+  if (v === 'market') countAdImpressions();
+  render();
+}
+function switchAccount(id) {
+  state.session.actingAs = id; state.session.openThread = null;
+  const items = navItems().map(i => i.id);
+  if (!items.includes(state.session.view)) state.session.view = items[0];
+  render();
+  toast('Now acting as ' + acc(id).name);
+}
+function toggleTheme() { state.session.theme = state.session.theme === 'light' ? 'dark' : 'light'; render(); }
+
+/* ============ VIEW: MARKETPLACE (buyer) ============ */
+
+function countAdImpressions() {
+  visibleListings(me().id).filter(l => l.sponsored).forEach(l => { l.adStats.imp++; });
+}
+
+function offerRow(l, opts = {}) {
+  const p = product(l.productId);
+  const nego = acceptedNego(me().id, l.id);
+  const effPrice = nego ? nego.price : l.price;
+  const avail = availableUnits(l);
+  return `<div class="offer">
+    <div class="grow">${who(l.ownerId)}</div>
+    <div class="stack" style="min-width:130px">
+      <span class="meta"><b>${esc(l.unit)}</b> of ${l.unitContains} ${esc(p.baseUnit)}s</span>
+      <span class="meta">MOQ ${l.moq} · ${avail} available</span>
+    </div>
+    <div class="stack" style="min-width:120px">
+      <span class="price">${money(effPrice)}<small> /${esc(l.unit)}</small></span>
+      <span class="meta">${money(effPrice / l.unitContains)}/${esc(p.baseUnit)}
+        ${nego ? '<span class="chip ok">negotiated</span>' : ''}</span>
+    </div>
+    <div class="row">
+      <button class="btn primary small" onclick="openOrderModal('${l.id}')">Order</button>
+      ${l.negotiable && !nego ? `<button class="btn small" onclick="openNegoModal('${l.id}')">Negotiate</button>` : ''}
+      <button class="btn small" onclick="openThreadWith('${l.ownerId}','${esc(p.name)}')">Message</button>
+    </div>
+  </div>`;
+}
+
+function vMarket() {
+  const m = me();
+  const vis = visibleListings(m.id);
+  const sponsored = vis.filter(l => l.sponsored);
+  // group by product
+  const byProd = {};
+  vis.forEach(l => { (byProd[l.productId] = byProd[l.productId] || []).push(l); });
+  const teasers = teaserListings(m.id);
+
+  let html = `<h1 class="viewtitle">Marketplace</h1>
+  <p class="viewsub">You only see listings from channels that approved you. Sellers and brokers look identical from here — every storefront is a masked alias. The same product can appear from several channels at different units and prices; pick your counterparty.</p>`;
+
+  if (sponsored.length) {
+    html += `<div class="sponsoredstrip">` + sponsored.map(l => {
+      const p = product(l.productId);
+      return `<div class="adcard" onclick="adClick('${l.id}')">
+        <div class="row between"><span class="chip gold">Sponsored</span><span class="meta">${esc(acc(l.ownerId).alias)}</span></div>
+        <div class="row" style="margin-top:8px"><span class="prodimg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+        <div class="stack"><b style="font-size:13px">${esc(p.name)}</b>
+        <span class="meta">${money(l.price)}/${esc(l.unit)} · MOQ ${l.moq}</span></div></div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+
+  const prods = Object.keys(byProd);
+  if (!prods.length) html += `<div class="empty">No listings yet — you need a seller or broker to approve you or send an invite code (My Network → Redeem invite).</div>`;
+  prods.forEach(pid => {
+    const p = product(pid);
+    const offers = byProd[pid].sort((a, b) => pricePerBase(a) - pricePerBase(b));
+    html += `<div class="prodgroup">
+      <div class="prodhead">
+        <span class="prodimg lg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+        <div class="stack" style="gap:2px">
+          <b style="font-size:15px">${esc(p.name)}</b>
+          <span class="meta">${esc(p.category)} · ${offers.length} offer${offers.length > 1 ? 's' : ''} in your network</span>
+          <span class="meta">${esc(p.desc || '')}</span>
+        </div>
+      </div>
+      ${offers.map(l => offerRow(l)).join('')}
+    </div>`;
+  });
+
+  if (teasers.length) {
+    html += `<h2 class="sec">🔒 In the network, not in yours yet <span class="count">(${teasers.length})</span></h2>
+    <p class="viewsub">These channels haven't approved you. You can see that something exists — not the details, not the identity. Request access and the channel owner decides.</p>
+    <div class="grid2">` + teasers.map(l => {
+      const p = product(l.productId);
+      const pending = rel(l.ownerId, me().id, 'buyer');
+      return `<div class="card locked">
+        <span class="locktag">🔒</span>
+        <div class="row">
+          <span class="prodimg blurred">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+          <div class="stack" style="gap:2px">
+            <b class="blurred" style="font-size:14px">${esc(p.name)}</b>
+            <span class="meta">${esc(p.category)} · sold by <b>${esc(l.unit)}</b></span>
+            <span class="meta">${esc(acc(l.ownerId).alias)} · ${starsHtml(l.ownerId)}</span>
+          </div>
+        </div>
+        <div class="row" style="margin-top:10px">
+          ${pending ? `<span class="chip warn">Access requested — pending</span>`
+                    : `<button class="btn small primary" onclick="requestAccess('${l.ownerId}')">Request access</button>`}
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+  return html;
+}
+
+function adClick(listingId) {
+  const l = listing(listingId); l.adStats.clicks++;
+  openOrderModal(listingId);
+}
+
+function requestAccess(channelId) {
+  state.rels.push({ id: uid('r'), grantorId: channelId, granteeId: me().id, kind: 'buyer', status: 'pending', requestedBy: me().id,
+    terms: { comm: 'relay', reveal: false, priceFloor: null, minVolume: '' } });
+  toast('Access requested — the channel owner will review your trade profile');
+  render();
+}
+
+/* ============ VIEW: SOURCE CATALOG (broker) ============ */
+
+function vSources() {
+  const m = me();
+  const myRels = state.rels.filter(r => r.kind === 'broker' && r.granteeId === m.id && r.status !== 'revoked');
+  const approvedSellers = myRels.filter(r => r.status === 'approved').map(r => r.grantorId);
+  const pendingSellers = myRels.filter(r => r.status === 'pending').map(r => r.grantorId);
+
+  let html = `<h1 class="viewtitle">Source Catalog</h1>
+  <p class="viewsub">Suppliers who approved you as a broker. You can re-list anything here under <b>your own storefront</b> — your unit size, your price, your minimums. Buyers will never see the supplier behind your listing.</p>`;
+
+  if (!approvedSellers.length) html += `<div class="empty">No supplier approvals yet — request access below.</div>`;
+
+  approvedSellers.forEach(sid => {
+    const r = approved(sid, m.id, 'broker');
+    const ls = state.listings.filter(l => l.ownerId === sid && !l.sourceId && l.active);
+    html += `<div class="card">
+      <div class="row between">
+        ${who(sid)}
+        <span class="row">
+          <span class="chip">${r.terms.comm === 'relay' ? '🔁 relay comms' : '↔ direct comms allowed'}</span>
+          ${r.terms.priceFloor ? `<span class="chip warn">price floor ${money(r.terms.priceFloor)}/base unit</span>` : ''}
+          ${r.terms.minVolume ? `<span class="chip">min: ${esc(r.terms.minVolume)}</span>` : ''}
+        </span>
+      </div>
+      <hr class="hr">
+      ${ls.map(l => {
+        const p = product(l.productId);
+        const mine = state.listings.find(x => x.sourceId === l.id && x.ownerId === m.id);
+        return `<div class="offer">
+          <span class="prodimg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+          <div class="grow stack" style="gap:2px">
+            <b style="font-size:13.5px">${esc(p.name)}</b>
+            <span class="meta"><b>${esc(l.unit)}</b> of ${l.unitContains} ${esc(p.baseUnit)}s · ${money(l.price)}/${esc(l.unit)} (${money(pricePerBase(l))}/${esc(p.baseUnit)}) · ${l.stock} in stock · MOQ ${l.moq}</span>
+          </div>
+          ${mine ? `<span class="chip ok">Listed by you ✓</span><button class="btn small" onclick="openListingEdit('${mine.id}')">Edit my listing</button>`
+                 : `<button class="btn primary small" onclick="openDeriveModal('${l.id}')">Create my listing</button>`}
+          <button class="btn small" onclick="openThreadWith('${sid}','${esc(p.name)}')">Message supplier</button>
+        </div>`;
+      }).join('') || '<div class="empty">This supplier has no active source listings.</div>'}
+    </div>`;
+  });
+
+  // supplier directory: sellers I have no edge with
+  const dir = state.accounts.filter(a => a.roles.includes('seller') && a.id !== m.id &&
+    !myRels.some(r => r.grantorId === a.id));
+  html += `<h2 class="sec">🧭 Supplier directory</h2>
+  <p class="viewsub">Verified sellers on the network, masked. Request broker access — they see your trade profile and rating, then decide and set terms.</p>
+  <div class="grid2">` +
+    (pendingSellers.map(sid => `<div class="card"><div class="row between">${who(sid)}<span class="chip warn">requested — pending</span></div></div>`).join('')) +
+    (dir.map(a => `<div class="card"><div class="row between">${who(a.id)}
+      <button class="btn small primary" onclick="requestBrokerAccess('${a.id}')">Request broker access</button></div>
+      <div class="meta" style="margin-top:6px">${esc(a.tagline || '')}</div></div>`).join('') || (pendingSellers.length ? '' : '<div class="empty">No other sellers on the network yet.</div>')) +
+  `</div>`;
+  return html;
+}
+
+function requestBrokerAccess(sellerId) {
+  state.rels.push({ id: uid('r'), grantorId: sellerId, granteeId: me().id, kind: 'broker', status: 'pending', requestedBy: me().id,
+    terms: { comm: 'relay', reveal: false, priceFloor: null, minVolume: '' } });
+  toast('Broker access requested');
+  render();
+}
+
+/* ============ VIEW: MY PRODUCTS (seller) ============ */
+
+function vProducts() {
+  const mine = state.products.filter(p => p.ownerId === me().id);
+  return `<h1 class="viewtitle">My Products</h1>
+  <p class="viewsub">Canonical catalog — one product, many listings. Listings (yours or your brokers') all point back here for name, images and specs.</p>
+  <button class="btn primary" onclick="openProductModal()">＋ Add product</button>
+  <div class="grid2" style="margin-top:14px">` +
+  (mine.map(p => {
+    const ls = state.listings.filter(l => l.productId === p.id);
+    const derived = ls.filter(l => l.sourceId);
+    return `<div class="card">
+      <div class="row">
+        <span class="prodimg lg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+        <div class="stack" style="gap:2px">
+          <b>${esc(p.name)}</b>
+          <span class="meta">${esc(p.category)} · base unit: ${esc(p.baseUnit)}</span>
+          <span class="meta">${ls.filter(l => !l.sourceId).length} source listing(s) · ${derived.length} broker re-listing(s)</span>
+        </div>
+      </div>
+      <div class="meta" style="margin-top:8px">${esc(p.desc || '')}</div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn small" onclick="openSourceListingModal('${p.id}')">＋ New listing</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty">No products yet.</div>') + `</div>`;
+}
+
+/* ============ VIEW: MY LISTINGS (seller + broker) ============ */
+
+function vListings() {
+  const m = me();
+  const mine = state.listings.filter(l => l.ownerId === m.id);
+  const src = mine.filter(l => !l.sourceId), der = mine.filter(l => l.sourceId);
+  let html = `<h1 class="viewtitle">My Listings</h1>
+  <p class="viewsub">What your storefront (“${esc(m.alias)}”) offers. Toggle visibility, sponsor placement, and see broker re-listings of your goods.</p>`;
+
+  const block = (l) => {
+    const p = product(l.productId);
+    const s = sourceOf(l);
+    const cb = costBasisPerUnit(l);
+    const floor = s ? (approved(s.ownerId, m.id, 'broker') || {}).terms?.priceFloor : null;
+    const floorViolated = floor && pricePerBase(l) < floor;
+    return `<div class="card">
+      <div class="row between">
+        <div class="row">
+          <span class="prodimg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+          <div class="stack" style="gap:2px">
+            <b>${esc(p.name)}</b>
+            <span class="meta"><b>${esc(l.unit)}</b> of ${l.unitContains} ${esc(p.baseUnit)}s · ${money(l.price)}/${esc(l.unit)} · MOQ ${l.moq}</span>
+            ${s ? `<span class="meta">↳ derived from <b>${esc(acc(s.ownerId).alias)}</b> · cost basis ${money(cb)}/${esc(l.unit)} · margin <b>${money(l.price - cb)}</b>/${esc(l.unit)} · held stock: ${l.heldStock || 0} ${esc(l.unit)}s</span>`
+                 : `<span class="meta">${l.stock} ${esc(l.unit)}s in stock</span>`}
+            ${floorViolated ? `<span class="chip danger">below supplier price floor (${money(floor)}/${esc(p.baseUnit)})</span>` : ''}
+          </div>
+        </div>
+        <div class="stack" style="align-items:flex-end">
+          <span class="row">
+            ${l.active ? '<span class="chip ok">active</span>' : '<span class="chip">paused</span>'}
+            ${l.sponsored ? `<span class="chip gold">sponsored · ${l.adStats.imp} views · ${l.adStats.clicks} clicks</span>` : ''}
+          </span>
+          <span class="row">
+            <button class="btn small" onclick="openListingEdit('${l.id}')">Edit</button>
+            <button class="btn small" onclick="toggleSponsor('${l.id}')">${l.sponsored ? 'Unsponsor' : '⭐ Sponsor $25/wk'}</button>
+            <button class="btn small" onclick="toggleActive('${l.id}')">${l.active ? 'Pause' : 'Activate'}</button>
+          </span>
+        </div>
+      </div>
+    </div>`;
+  };
+
+  if (m.roles.includes('seller')) {
+    html += `<h2 class="sec">Source listings <span class="count">(${src.length})</span></h2>`;
+    html += src.map(block).join('') || '<div class="empty">No source listings — add one from My Products.</div>';
+    // broker re-listings of my goods
+    const rels = state.listings.filter(l => l.sourceId && sourceOf(l) && sourceOf(l).ownerId === m.id);
+    if (rels.length) {
+      html += `<h2 class="sec">Broker re-listings of your goods <span class="count">(${rels.length})</span></h2>
+      <p class="viewsub">You always see who resells your product, at what unit and price — buyers never see the chain.</p>`;
+      html += rels.map(l => {
+        const p = product(l.productId);
+        return `<div class="card"><div class="row between">
+          <div class="row">${who(l.ownerId)}
+          <span class="meta">re-lists <b>${esc(p.name)}</b> as <b>${esc(l.unit)} of ${l.unitContains}</b> @ ${money(l.price)} (${money(pricePerBase(l))}/${esc(p.baseUnit)})</span></div>
+          <span class="chip ${l.active ? 'ok' : ''}">${l.active ? 'live' : 'paused'}</span>
+        </div></div>`;
+      }).join('');
+    }
+  }
+  if (m.roles.includes('broker')) {
+    html += `<h2 class="sec">My broker listings (derived) <span class="count">(${der.length})</span></h2>`;
+    html += der.map(block).join('') || '<div class="empty">Nothing re-listed yet — pick something from the Source Catalog.</div>';
+  }
+  return html;
+}
+
+function toggleSponsor(id) { const l = listing(id); l.sponsored = !l.sponsored; toast(l.sponsored ? 'Listing sponsored — pinned for approved buyers' : 'Sponsorship ended'); render(); }
+function toggleActive(id)  { const l = listing(id); l.active = !l.active; render(); }
+
+/* ============ VIEW: DEALS (negotiations) ============ */
+
+function vDeals() {
+  const m = me().id;
+  const mine = state.negotiations.filter(n => n.buyerId === m || (listing(n.listingId) && listing(n.listingId).ownerId === m));
+  return `<h1 class="viewtitle">Deals & Offers</h1>
+  <p class="viewsub">Per-channel price negotiation. An accepted deal becomes a private price for that buyer on that listing — a broker negotiating with their buyer never touches the supplier's price.</p>` +
+  (mine.map(n => {
+    const l = listing(n.listingId); const p = product(l.productId);
+    const iAmBuyer = n.buyerId === m;
+    const other = iAmBuyer ? l.ownerId : n.buyerId;
+    const myTurn = (n.status === 'open' && !iAmBuyer) || (n.status === 'countered' && iAmBuyer);
+    return `<div class="card">
+      <div class="row between">
+        <div class="row"><span class="prodimg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+          <div class="stack" style="gap:2px"><b>${esc(p.name)}</b>
+          <span class="meta">with</span> ${who(other, { stars: false })}</div></div>
+        <span class="chip ${n.status === 'accepted' ? 'ok' : n.status === 'declined' ? 'danger' : myTurn ? 'warn' : ''}">
+          ${n.status === 'accepted' ? 'accepted ✓' : n.status === 'declined' ? 'declined' : n.status === 'used' ? 'used on order' : myTurn ? 'your move' : 'waiting on them'}</span>
+      </div>
+      <ul class="timeline">${n.history.map(h => `<li><b>${h.by === m ? 'You' : esc(acc(h.by).alias)}:</b> ${h.qty} × ${money(h.price)}/${esc(l.unit)}${h.note ? ' — “' + esc(h.note) + '”' : ''} <span class="meta">· ${ago(h.at)}</span></li>`).join('')}</ul>
+      ${myTurn && (n.status === 'open' || n.status === 'countered') ? `
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary small" onclick="negoAccept('${n.id}')">Accept ${money(n.price)}/${esc(l.unit)}</button>
+          <button class="btn small" onclick="openCounterModal('${n.id}')">Counter</button>
+          <button class="btn small danger" onclick="negoDecline('${n.id}')">Decline</button>
+        </div>` : ''}
+      ${n.status === 'accepted' && iAmBuyer ? `<div class="row" style="margin-top:10px"><button class="btn primary small" onclick="openOrderModal('${l.id}')">Order at negotiated price</button></div>` : ''}
+    </div>`;
+  }).join('') || '<div class="empty">No negotiations yet — hit “Negotiate” on any offer in the Marketplace.</div>');
+}
+
+function negoAccept(id) {
+  const n = state.negotiations.find(x => x.id === id);
+  n.status = 'accepted';
+  n.history.push({ by: me().id, qty: n.qty, price: n.price, note: 'Accepted', at: now() });
+  toast('Deal accepted — private price is live for this buyer');
+  render();
+}
+function negoDecline(id) {
+  const n = state.negotiations.find(x => x.id === id);
+  n.status = 'declined';
+  n.history.push({ by: me().id, qty: n.qty, price: n.price, note: 'Declined', at: now() });
+  render();
+}
+
+/* ============ VIEW: ORDERS ============ */
+
+const STATUS_CHIP = { placed: 'warn', routed: 'violet', confirmed: 'accent', shipped: 'accent', delivered: 'ok', disputed: 'danger' };
+
+function orderCard(o, side) {
+  const l = listing(o.listingId); const p = product(l.productId);
+  const m = me().id;
+  const isDerived = !!l.sourceId;
+  const up = o.upstreamId ? order(o.upstreamId) : null;
+  const down = o.downstreamId ? order(o.downstreamId) : null;
+  let provenance = '';
+  if (side === 'sale' && down) {
+    provenance = `<div class="meta" style="margin-top:6px">🔀 Upstream PO from <b>${esc(acc(o.buyerId).alias)}</b> for their downstream order — end buyer identity is masked from you.</div>`;
+  }
+  if (side === 'sale' && isDerived && o.ownerId === m) {
+    provenance = `<div class="meta" style="margin-top:6px">🔀 Provenance (only you see this): ${esc(acc(sourceOf(l).ownerId).alias)} → you → ${esc(acc(o.buyerId).alias)}.
+      ${up ? `Upstream PO <b>${up.id}</b>: ${up.status}.` : o.fulfilledFromStock ? 'Fulfilled from your held stock.' : ''}</div>`;
+  }
+
+  let actions = '';
+  if (side === 'sale') {
+    if (o.status === 'placed' && isDerived) {
+      const canStock = (l.heldStock || 0) >= o.qty;
+      actions = `<button class="btn primary small" onclick="routeToSupplier('${o.id}')">Route to supplier (blind drop-ship)</button>
+                 <button class="btn small" ${canStock ? '' : 'disabled'} onclick="fulfillFromStock('${o.id}')">Fulfill from my stock (${l.heldStock || 0} held)</button>`;
+    } else if (o.status === 'placed') {
+      actions = `<button class="btn primary small" onclick="confirmOrder('${o.id}')">Confirm order</button>`;
+    } else if (o.status === 'confirmed') {
+      actions = `<button class="btn primary small" onclick="shipOrder('${o.id}')">Mark shipped${down ? ' (label prints buyer-facing storefront: ' + esc(acc(down.ownerId).alias) + ')' : ''}</button>`;
+    }
+    if (o.status === 'delivered' && !o.ratedByOwner) actions += ` <button class="btn small" onclick="openRateModal('${o.id}','buyer')">Rate buyer</button>`;
+  } else {
+    if (o.status === 'shipped') actions = `<button class="btn primary small" onclick="confirmDelivery('${o.id}')">Confirm delivery (releases escrow)</button>`;
+    if (o.status === 'delivered' && !o.ratedByBuyer && !o.downstreamId) actions += ` <button class="btn small" onclick="openRateModal('${o.id}','counterparty')">Rate counterparty</button>`;
+  }
+
+  return `<div class="card">
+    <div class="row between">
+      <div class="row">
+        <span class="prodimg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
+        <div class="stack" style="gap:2px">
+          <b>${esc(p.name)}</b>
+          <span class="meta">#${o.id} · ${o.qty} × ${esc(l.unit)} @ ${money(o.unitPrice)} = <b>${money(o.total)}</b></span>
+          <span class="meta">${side === 'sale' ? 'Buyer:' : 'From:'} </span>
+          ${who(side === 'sale' ? o.buyerId : o.ownerId, { stars: false })}
+        </div>
+      </div>
+      <span class="chip ${STATUS_CHIP[o.status] || ''}">${o.status}</span>
+    </div>
+    ${provenance}
+    <ul class="timeline">${o.timeline.map(t => `<li>${esc(t.text)} <span class="meta">· ${ago(t.at)}</span></li>`).join('')}</ul>
+    <div class="row" style="margin-top:8px">${actions}
+      <button class="btn small" onclick="openInvoiceModal('${o.id}')">Invoice</button>
+      <button class="btn small" onclick="openThreadWith('${side === 'sale' ? o.buyerId : o.ownerId}','Order ${o.id}')">Message</button>
+    </div>
+  </div>`;
+}
+
+function vOrders() {
+  const m = me().id;
+  const purchases = state.orders.filter(o => o.buyerId === m).sort((a, b) => b.timeline[0].at - a.timeline[0].at);
+  const sales = state.orders.filter(o => o.ownerId === m).sort((a, b) => b.timeline[0].at - a.timeline[0].at);
+  let html = `<h1 class="viewtitle">Orders</h1>
+  <p class="viewsub">Whoever owns the buyer relationship is the counterparty of record — they route the order and they're on the hook. Provenance chains are visible only to the parties on each hop.</p>`;
+  if (purchases.length) {
+    html += `<h2 class="sec">Purchases <span class="count">(${purchases.length})</span></h2>` +
+      purchases.map(o => orderCard(o, 'purchase')).join('');
+  }
+  if (sales.length) {
+    html += `<h2 class="sec">Sales — you are counterparty of record <span class="count">(${sales.length})</span></h2>` +
+      sales.map(o => orderCard(o, 'sale')).join('');
+  }
+  if (!purchases.length && !sales.length) html += `<div class="empty">No orders yet.</div>`;
+  return html;
+}
+
+/* ---- order actions ---- */
+
+function placeOrder(listingId, qty) {
+  const l = listing(listingId); const m = me();
+  const nego = acceptedNego(m.id, l.id);
+  const unitPrice = nego ? nego.price : l.price;
+  const total = unitPrice * qty;
+  const o = {
+    id: uid('o'), buyerId: m.id, ownerId: l.ownerId, listingId: l.id, qty, unitPrice, total,
+    status: 'placed', upstreamId: null, downstreamId: null, fulfilledFromStock: false,
+    ratedByBuyer: false, ratedByOwner: false,
+    timeline: [{ at: now(), text: `Order placed — ${money(total)} paid into escrow` }],
+  };
+  state.orders.push(o);
+  state.ledger.push({ id: uid('lg'), orderId: o.id, accountId: m.id, type: 'escrow_out', amount: -total, note: 'Payment into escrow · order ' + o.id, at: now() });
+  if (nego) { nego.status = 'used'; }
+  // auto-routing for derived listings when broker has autoRoute on
+  const ownerAcc = acc(l.ownerId);
+  if (l.sourceId && ownerAcc.autoRoute) {
+    routeOrderCore(o, true);
+  }
+  closeModal(); render();
+  toast('Order placed & paid into escrow');
+}
+
+// Broker routing: consume held stock first, buy whole source units for the rest.
+function routeOrderCore(o, auto) {
+  const l = listing(o.listingId); const s = sourceOf(l);
+  const held = l.heldStock || 0;
+  const fromStock = Math.min(held, o.qty);
+  const remaining = o.qty - fromStock;
+  if (remaining <= 0) { return fulfillFromStockCore(o, auto); }
+  const packs = Math.ceil((remaining * l.unitContains) / s.unitContains);
+  if (s.stock < packs) { toast('Supplier is out of stock for this quantity'); return; }
+  s.stock -= packs;
+  const acquiredUnits = Math.floor((packs * s.unitContains) / l.unitContains);
+  l.heldStock = held - fromStock + (acquiredUnits - remaining);
+  const upTotal = packs * s.price;
+  const up = {
+    id: uid('o'), buyerId: l.ownerId, ownerId: s.ownerId, listingId: s.id, qty: packs, unitPrice: s.price, total: upTotal,
+    status: 'placed', upstreamId: null, downstreamId: o.id, fulfilledFromStock: false,
+    ratedByBuyer: false, ratedByOwner: false,
+    timeline: [{ at: now(), text: `Upstream PO created for downstream order #${o.id} — ${money(upTotal)} in escrow` }],
+  };
+  state.orders.push(up);
+  o.upstreamId = up.id;
+  o.status = 'routed';
+  o.timeline.push({ at: now(), text: (auto ? 'Auto-routed' : 'Routed') + `: upstream PO ${up.id} sent to supplier (${packs} ${s.unit}${packs > 1 ? 's' : ''}; ${acquiredUnits - remaining} ${l.unit}s go to your held stock)` });
+  state.ledger.push({ id: uid('lg'), orderId: up.id, accountId: l.ownerId, type: 'escrow_out', amount: -upTotal, note: 'Upstream PO payment into escrow · order ' + up.id, at: now() });
+}
+function routeToSupplier(orderId) { const o = order(orderId); routeOrderCore(o, false); render(); }
+
+function fulfillFromStockCore(o, auto) {
+  const l = listing(o.listingId);
+  l.heldStock -= o.qty;
+  o.fulfilledFromStock = true;
+  o.status = 'confirmed';
+  o.timeline.push({ at: now(), text: (auto ? 'Auto-confirmed' : 'Confirmed') + ' — fulfilling from broker held stock (' + l.heldStock + ' remaining)' });
+}
+function fulfillFromStock(orderId) { const o = order(orderId); fulfillFromStockCore(o, false); render(); toast('Fulfilling from your held stock'); }
+
+function confirmOrder(orderId) {
+  const o = order(orderId);
+  const l = listing(o.listingId);
+  if (!l.sourceId && !o.downstreamId) { l.stock -= o.qty; } // direct sale consumes source stock
+  if (o.downstreamId) { /* upstream PO stock already decremented at routing time */ }
+  o.status = 'confirmed';
+  o.timeline.push({ at: now(), text: 'Confirmed by ' + (o.downstreamId ? 'supplier' : 'seller') });
+  const down = o.downstreamId ? order(o.downstreamId) : null;
+  if (down) { down.status = 'confirmed'; down.timeline.push({ at: now(), text: 'Supplier confirmed the upstream PO' }); }
+  render();
+}
+
+function shipOrder(orderId) {
+  const o = order(orderId);
+  o.status = 'shipped';
+  const down = o.downstreamId ? order(o.downstreamId) : null;
+  o.timeline.push({ at: now(), text: down ? `Shipped — blind drop-ship, label branded “${acc(down.ownerId).alias}”, end-buyer address injected by platform` : 'Shipped' });
+  if (down) {
+    down.status = 'shipped';
+    down.timeline.push({ at: now(), text: 'Shipped by your storefront (drop-shipped from supplier under your branding)' });
+  }
+  render(); toast('Marked shipped');
+}
+
+function confirmDelivery(orderId) {
+  const o = order(orderId);
+  o.status = 'delivered';
+  o.timeline.push({ at: now(), text: 'Delivery confirmed by buyer — escrow released' });
+  releaseEscrow(o);
+  // if this was an upstream PO, the downstream broker order doesn't auto-deliver;
+  // if this is a downstream order with an upstream PO still open, settle that too.
+  const up = o.upstreamId ? order(o.upstreamId) : null;
+  if (up && up.status === 'shipped') {
+    up.status = 'delivered';
+    up.timeline.push({ at: now(), text: 'Downstream delivery confirmed — upstream escrow released' });
+    releaseEscrow(up);
+  }
+  render(); toast('Delivery confirmed — payouts released');
+  const l = listing(o.listingId);
+  if (!o.downstreamId) setTimeout(() => openRateModal(o.id, 'counterparty'), 350);
+}
+
+// escrow release: platform fee on retail (non-PO) hops; full release on PO hops
+function releaseEscrow(o) {
+  const isPO = !!o.downstreamId;
+  const fee = isPO ? 0 : +(o.total * PLATFORM_FEE).toFixed(2);
+  const net = +(o.total - fee).toFixed(2);
+  state.ledger.push({ id: uid('lg'), orderId: o.id, accountId: o.ownerId, type: 'payout', amount: net,
+    note: `Escrow release · order ${o.id}` + (fee ? ` (net of 3% platform fee ${money(fee)})` : ' (wholesale hop — no fee)'), at: now() });
+}
+
+/* ============ VIEW: MESSAGES ============ */
+
+function myThreads() {
+  const m = me().id;
+  return state.threads.filter(t => t.aId === m || t.bId === m);
+}
+
+function vMessages() {
+  const m = me();
+  const ths = myThreads();
+  const open = state.session.openThread ? state.threads.find(t => t.id === state.session.openThread) : null;
+
+  let html = `<h1 class="viewtitle">Messages</h1>
+  <p class="viewsub">All communication stays on-platform. Emails, phone numbers and links are stripped and flagged automatically. On relay channels, the middleman forwards questions upstream without exposing either side.</p>`;
+
+  if (!ths.length) return html + '<div class="empty">No conversations yet — hit “Message” on any listing or order.</div>';
+
+  if (!open) {
+    html += ths.map(t => {
+      const other = t.aId === m.id ? t.bId : t.aId;
+      const last = t.messages[t.messages.length - 1];
+      return `<div class="card" style="cursor:pointer" onclick="openThreadById('${t.id}')">
+        <div class="row between">
+          ${who(other, { stars: false })}
+          <span class="meta">${last ? ago(last.at) : ''}</span>
+        </div>
+        <div class="meta" style="margin-top:6px">${t.relay ? '<span class="chip violet">relay channel</span> ' : ''}Re: ${esc(t.contextLabel)} — ${last ? esc(last.text.slice(0, 80)) : 'no messages'}</div>
+      </div>`;
+    }).join('');
+    return html;
+  }
+
+  const other = open.aId === m.id ? open.bId : open.aId;
+  // relay controls: if I'm a broker in this thread and I have a supplier for the discussed context
+  const linked = open.linkedThreadId ? state.threads.find(t => t.id === open.linkedThreadId) : null;
+  const directIntroAvailable = canIntroduceDirect(open);
+
+  html += `<button class="btn small" onclick="state.session.openThread=null;render()">← All conversations</button>
+  <div class="card" style="margin-top:10px">
+    <div class="row between">
+      ${who(other)}
+      <span class="row">
+        ${open.relay ? '<span class="chip violet">relay channel — middleman controls upstream</span>' : ''}
+        ${directIntroAvailable ? `<button class="btn small" onclick="introduceDirect('${open.id}')">🔓 Introduce buyer & supplier directly</button>` : ''}
+      </span>
+    </div>
+    <div class="meta" style="margin:4px 0 8px">Re: ${esc(open.contextLabel)}</div>
+    <div class="thread">` +
+    open.messages.map((msg, i) => `
+      <div class="msg ${msg.from === m.id ? 'mine' : ''}">
+        <div class="bubble">${renderMsgText(msg.text)}</div>
+        <div class="msub">${msg.from === m.id ? 'You' : esc(acc(msg.from).alias)} · ${ago(msg.at)}
+          ${msg.flagged ? '<span class="flag">⚑ contact info removed & flagged</span>' : ''}
+          ${msg.relayed ? '<span class="chip violet" style="font-size:9.5px">relayed</span>' : ''}
+          ${canRelay(open, msg) ? `<button class="btn small" style="margin-left:6px" onclick="relayMessage('${open.id}',${i})">⇪ Relay ${relayDirection(open)}</button>` : ''}
+        </div>
+      </div>`).join('') +
+    `</div>
+    <div class="row" style="margin-top:10px">
+      <input id="msgbox" style="flex:1" placeholder="Write a message… (try including an email or phone number)" onkeydown="if(event.key==='Enter')sendMsg('${open.id}')">
+      <button class="btn primary" onclick="sendMsg('${open.id}')">Send</button>
+    </div>
+  </div>`;
+  return html;
+}
+
+function openThreadById(id) { state.session.openThread = id; render(); }
+
+function openThreadWith(otherId, contextLabel) {
+  const m = me().id;
+  let t = state.threads.find(t => ((t.aId === m && t.bId === otherId) || (t.aId === otherId && t.bId === m)) && t.contextLabel === contextLabel);
+  if (!t) {
+    // relay if either side's buyer-edge terms say relay
+    const r = approved(otherId, m, 'buyer') || approved(m, otherId, 'buyer');
+    t = { id: uid('t'), aId: m, bId: otherId, relay: !!(r && r.terms.comm === 'relay'), contextLabel, linkedThreadId: null, messages: [] };
+    state.threads.push(t);
+  }
+  state.session.openThread = t.id;
+  state.session.view = 'messages';
+  render();
+}
+
+function sendMsg(threadId) {
+  const box = document.getElementById('msgbox');
+  const raw = (box.value || '').trim(); if (!raw) return;
+  const { text, flagged } = maskContacts(raw);
+  const t = state.threads.find(x => x.id === threadId);
+  t.messages.push({ from: me().id, text, flagged, at: now() });
+  if (flagged) toast('⚑ Contact info removed — repeated attempts get accounts suspended');
+  render();
+}
+
+// A broker in the middle can relay a buyer's message up to the supplier, or a supplier's answer back down.
+function canRelay(t, msg) {
+  const m = me();
+  if (!m.roles.includes('broker') || msg.from === m.id) return false;
+  const other = msg.from;
+  // buyer → me: I can relay up if I have any approved supplier edge; supplier → me: relay down if linked thread exists
+  const otherIsMyBuyer = !!approved(m.id, other, 'buyer');
+  const otherIsMySupplier = !!approved(other, m.id, 'broker');
+  return otherIsMyBuyer || (otherIsMySupplier && !!t.linkedThreadId);
+}
+function relayDirection(t) {
+  const m = me();
+  const other = t.aId === m.id ? t.bId : t.aId;
+  return approved(m.id, other, 'buyer') ? 'to supplier' : 'to buyer';
+}
+function relayMessage(threadId, msgIdx) {
+  const m = me();
+  const t = state.threads.find(x => x.id === threadId);
+  const msg = t.messages[msgIdx];
+  const other = t.aId === m.id ? t.bId : t.aId;
+  const otherIsMyBuyer = !!approved(m.id, other, 'buyer');
+
+  if (otherIsMyBuyer) {
+    // relay buyer question upstream: pick my supplier for this context (first approved supplier edge)
+    const supEdge = state.rels.find(r => r.kind === 'broker' && r.granteeId === m.id && r.status === 'approved');
+    if (!supEdge) { toast('No approved supplier to relay to'); return; }
+    let up = t.linkedThreadId ? state.threads.find(x => x.id === t.linkedThreadId) : null;
+    if (!up) {
+      up = { id: uid('t'), aId: m.id, bId: supEdge.grantorId, relay: false, contextLabel: t.contextLabel, linkedThreadId: t.id, messages: [] };
+      state.threads.push(up); t.linkedThreadId = up.id;
+    }
+    up.messages.push({ from: m.id, text: '⇪ Relayed from my buyer: “' + msg.text + '”', flagged: false, at: now(), relayed: true });
+    toast('Relayed upstream — buyer identity stays masked');
+  } else {
+    // relay supplier answer downstream
+    const down = state.threads.find(x => x.id === t.linkedThreadId);
+    if (!down) { toast('No linked buyer thread'); return; }
+    down.messages.push({ from: m.id, text: '⇩ From the supplier: “' + msg.text + '”', flagged: false, at: now(), relayed: true });
+    toast('Relayed to buyer — supplier identity stays masked');
+  }
+  render();
+}
+
+// direct introduction: allowed only when the supplier's broker-edge terms permit direct comms
+function canIntroduceDirect(t) {
+  const m = me();
+  if (!m.roles.includes('broker')) return false;
+  const other = t.aId === m.id ? t.bId : t.aId;
+  if (!approved(m.id, other, 'buyer')) return false; // other must be my buyer
+  return state.rels.some(r => r.kind === 'broker' && r.granteeId === m.id && r.status === 'approved' && r.terms.comm === 'direct');
+}
+function introduceDirect(threadId) {
+  const m = me();
+  const t = state.threads.find(x => x.id === threadId);
+  const buyerId = t.aId === m.id ? t.bId : t.aId;
+  const supEdge = state.rels.find(r => r.kind === 'broker' && r.granteeId === m.id && r.status === 'approved' && r.terms.comm === 'direct');
+  const nt = { id: uid('t'), aId: buyerId, bId: supEdge.grantorId, relay: false, contextLabel: t.contextLabel + ' (direct, introduced by ' + m.alias + ')', linkedThreadId: null, messages: [
+    { from: m.id, text: 'Introduced buyer and supplier for direct discussion. Identities stay masked; orders still route through my channel.', flagged: false, at: now(), relayed: true },
+  ] };
+  state.threads.push(nt);
+  toast('Direct thread opened between buyer and supplier (identities still masked)');
+  render();
+}
+
+/* ============ VIEW: NETWORK ============ */
+
+function relRow(r, iAmGrantor) {
+  const otherId = iAmGrantor ? r.granteeId : r.grantorId;
+  const t = r.terms;
+  const termChips = `
+    <span class="chip">${t.comm === 'relay' ? '🔁 relay comms' : '↔ direct comms'}</span>
+    ${t.reveal ? '<span class="chip warn">identity revealed</span>' : '<span class="chip">masked</span>'}
+    ${t.priceFloor ? `<span class="chip">floor ${money(t.priceFloor)}/base</span>` : ''}
+    ${t.minVolume ? `<span class="chip">min ${esc(t.minVolume)}</span>` : ''}`;
+  const buyerProfile = (!iAmGrantor || r.status !== 'pending') ? '' : (() => {
+    const ordersCount = state.orders.filter(o => o.buyerId === otherId && o.status === 'delivered').length;
+    return `<div class="meta" style="margin-top:6px">Trade profile: ${ordersCount} completed orders on platform · ${ratingOf(otherId).count} reviews</div>`;
+  })();
+  return `<div class="card">
+    <div class="row between">
+      <div class="row">${who(otherId)}
+        <span class="chip ${r.status === 'approved' ? 'ok' : r.status === 'pending' ? 'warn' : 'danger'}">${r.status}${r.status === 'pending' && r.requestedBy === otherId ? ' — they requested' : r.status === 'pending' ? ' — you requested' : ''}</span>
+      </div>
+      <span class="row">
+        ${iAmGrantor && r.status === 'pending' && r.requestedBy === otherId ? `
+          <button class="btn primary small" onclick="approveRel('${r.id}')">Approve</button>
+          <button class="btn small danger" onclick="declineRel('${r.id}')">Decline</button>` : ''}
+        ${iAmGrantor && r.status === 'approved' ? `
+          <button class="btn small" onclick="openTermsModal('${r.id}')">Terms</button>
+          <button class="btn small danger" onclick="revokeRel('${r.id}')">Revoke</button>` : ''}
+      </span>
+    </div>
+    <div class="row" style="margin-top:8px">${termChips} <span class="meta">· ${r.kind === 'broker' ? 'broker relationship' : 'buyer relationship'}${iAmGrantor ? ' · you set the terms' : ' · their terms apply to you'}</span></div>
+    ${buyerProfile}
+  </div>`;
+}
+
+function vNetwork() {
+  const m = me();
+  let html = `<h1 class="viewtitle">My Network</h1>
+  <p class="viewsub">The approval graph is the product. Every edge carries its own terms — communication mode, identity reveal, minimums, price floors — set by whoever granted the access.</p>`;
+
+  if (m.roles.includes('seller') || m.roles.includes('broker')) {
+    const myBrokers = state.rels.filter(r => r.kind === 'broker' && r.grantorId === m.id && r.status !== 'revoked');
+    const myBuyers = state.rels.filter(r => r.kind === 'buyer' && r.grantorId === m.id && r.status !== 'revoked');
+    if (m.roles.includes('seller')) {
+      html += `<h2 class="sec">Brokers I approved <span class="count">(${myBrokers.length})</span></h2>` +
+        (myBrokers.map(r => relRow(r, true)).join('') || '<div class="empty">No brokers yet. Brokers request access from their Source Catalog.</div>');
+    }
+    html += `<div class="row between"><h2 class="sec">My buyers <span class="count">(${myBuyers.length})</span></h2>
+      <button class="btn small primary" onclick="makeInvite()">✉️ Invite a buyer</button></div>` +
+      (myBuyers.map(r => relRow(r, true)).join('') || '<div class="empty">No buyers yet — invite one or approve an access request.</div>');
+    const openInvites = state.invites.filter(i => i.issuerId === m.id && !i.usedBy);
+    if (openInvites.length) {
+      html += `<div class="card"><b style="font-size:13px">Open invite codes</b>
+        <div class="meta" style="margin-top:6px">Share off-platform. Redeeming auto-approves the buyer into your channel. (Only sellers and brokers can invite — there is no public signup into a channel.)</div>
+        ${openInvites.map(i => `<div class="row" style="margin-top:8px"><span class="chip accent" style="font-size:13px">${i.code}</span><span class="meta">unused</span></div>`).join('')}</div>`;
+    }
+  }
+
+  if (m.roles.includes('broker')) {
+    const mySuppliers = state.rels.filter(r => r.kind === 'broker' && r.granteeId === m.id && r.status !== 'revoked');
+    html += `<h2 class="sec">My suppliers <span class="count">(${mySuppliers.length})</span></h2>` +
+      (mySuppliers.map(r => relRow(r, false)).join('') || '<div class="empty">No supplier approvals yet — request access in the Source Catalog.</div>');
+  }
+
+  if (m.roles.includes('buyer')) {
+    const myCh = state.rels.filter(r => r.kind === 'buyer' && r.granteeId === m.id && r.status !== 'revoked');
+    html += `<h2 class="sec">Channels I can buy from <span class="count">(${myCh.length})</span></h2>` +
+      (myCh.map(r => relRow(r, false)).join('') || '<div class="empty">No channels yet.</div>');
+    html += `<div class="card"><b style="font-size:13px">Redeem an invite code</b>
+      <div class="row" style="margin-top:8px">
+        <input id="invitecode" placeholder="TM-XXXX" style="width:140px">
+        <button class="btn primary small" onclick="redeemInvite()">Redeem</button>
+      </div></div>`;
+  }
+  return html;
+}
+
+function approveRel(id) {
+  const r = state.rels.find(x => x.id === id);
+  r.status = 'approved';
+  toast('Approved — terms are editable any time');
+  openTermsModal(id);
+}
+function declineRel(id) {
+  const r = state.rels.find(x => x.id === id);
+  state.rels = state.rels.filter(x => x.id !== id);
+  render(); toast('Request declined');
+}
+function revokeRel(id) {
+  const r = state.rels.find(x => x.id === id);
+  if (!confirm('Revoke this relationship? Broker re-listings sourced from you will be paused automatically.')) return;
+  r.status = 'revoked';
+  if (r.kind === 'broker') {
+    state.listings.forEach(l => {
+      if (l.ownerId === r.granteeId && l.sourceId && sourceOf(l) && sourceOf(l).ownerId === r.grantorId) l.active = false;
+    });
+  }
+  render(); toast('Revoked — dependent listings paused');
+}
+function makeInvite() {
+  const code = 'TM-' + Math.random().toString(36).slice(2, 6).toUpperCase();
+  state.invites.push({ code, issuerId: me().id, usedBy: null });
+  render(); toast('Invite code created: ' + code);
+}
+function redeemInvite() {
+  const code = (document.getElementById('invitecode').value || '').trim().toUpperCase();
+  const inv = state.invites.find(i => i.code === code && !i.usedBy);
+  if (!inv) { toast('Invalid or used code'); return; }
+  inv.usedBy = me().id;
+  state.rels.push({ id: uid('r'), grantorId: inv.issuerId, granteeId: me().id, kind: 'buyer', status: 'approved', requestedBy: inv.issuerId,
+    terms: { comm: 'relay', reveal: false, priceFloor: null, minVolume: '' } });
+  render(); toast('Welcome — you can now buy from ' + acc(inv.issuerId).alias);
+}
+
+/* ============ VIEW: WALLET ============ */
+
+function vWallet() {
+  const m = me().id;
+  const rows = state.ledger.filter(e => e.accountId === m).sort((a, b) => b.at - a.at);
+  const bal = rows.reduce((s, e) => s + e.amount, 0);
+  const escrowHeld = state.orders
+    .filter(o => o.buyerId === m && ['placed', 'routed', 'confirmed', 'shipped'].includes(o.status))
+    .reduce((s, o) => s + o.total, 0);
+  return `<h1 class="viewtitle">Wallet</h1>
+  <p class="viewsub">Buyers pay the platform into escrow; payouts split automatically on delivery — supplier cost, broker margin, platform fee (3% on the retail hop). Invoices are generated per hop with the right identities masked on each document.</p>
+  <div class="row" style="margin-bottom:16px">
+    <div class="card" style="flex:1;margin:0"><div class="meta">Net flow (this demo)</div><div class="price" style="font-size:22px">${money(bal)}</div></div>
+    <div class="card" style="flex:1;margin:0"><div class="meta">In escrow (your open purchases)</div><div class="price" style="font-size:22px">${money(escrowHeld)}</div></div>
+  </div>` +
+  (rows.map(e => `<div class="ledgerrow">
+    <span>${esc(e.note)} <span class="meta">· ${ago(e.at)}</span></span>
+    <span class="amt ${e.amount >= 0 ? 'pos' : 'neg'}">${e.amount >= 0 ? '+' : ''}${money(e.amount)}</span>
+  </div>`).join('') || '<div class="empty">No transactions yet.</div>');
+}
+
+/* ============ MODALS ============ */
+
+function openModal(html) {
+  document.getElementById('modal').innerHTML = html;
+  document.getElementById('modalwrap').classList.add('open');
+}
+function closeModal() { document.getElementById('modalwrap').classList.remove('open'); }
+
+/* ---- order modal ---- */
+function openOrderModal(listingId) {
+  const l = listing(listingId); const p = product(l.productId);
+  const nego = acceptedNego(me().id, l.id);
+  const price = nego ? nego.price : l.price;
+  const avail = availableUnits(l);
+  openModal(`<h3>Order — ${esc(p.name)}</h3>
+  <p class="msub">Sold by ${esc(acc(l.ownerId).alias)} · ${esc(l.unit)} of ${l.unitContains} ${esc(p.baseUnit)}s ·
+  ${money(price)}/${esc(l.unit)} ${nego ? '(your negotiated price)' : ''} · MOQ ${l.moq} · ${avail} available.
+  Payment goes into platform escrow and is released to your counterparty when you confirm delivery.</p>
+  <div class="fld"><label>Quantity (${esc(l.unit)}s)</label>
+    <input type="number" id="ordqty" value="${l.moq}" min="${l.moq}" max="${avail}" oninput="updOrdTotal('${l.id}')"></div>
+  <div class="row between"><b id="ordtotal">${money(price * l.moq)}</b>
+    <span class="row">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn primary" onclick="submitOrder('${l.id}')">Place order & pay into escrow</button>
+    </span></div>`);
+}
+function updOrdTotal(listingId) {
+  const l = listing(listingId);
+  const nego = acceptedNego(me().id, l.id);
+  const price = nego ? nego.price : l.price;
+  const q = parseInt(document.getElementById('ordqty').value) || 0;
+  document.getElementById('ordtotal').textContent = money(price * q);
+}
+function submitOrder(listingId) {
+  const l = listing(listingId);
+  const q = parseInt(document.getElementById('ordqty').value) || 0;
+  if (q < l.moq) { toast('Below this channel’s minimum (' + l.moq + ')'); return; }
+  if (q > availableUnits(l)) { toast('Only ' + availableUnits(l) + ' available'); return; }
+  placeOrder(listingId, q);
+}
+
+/* ---- negotiation modals ---- */
+function openNegoModal(listingId) {
+  const l = listing(listingId); const p = product(l.productId);
+  openModal(`<h3>Make an offer — ${esc(p.name)}</h3>
+  <p class="msub">List price ${money(l.price)}/${esc(l.unit)} from ${esc(acc(l.ownerId).alias)}. Offers are per-channel and private.</p>
+  <div class="fld"><label>Quantity (${esc(l.unit)}s)</label><input type="number" id="ngqty" value="${l.moq}" min="${l.moq}"></div>
+  <div class="fld"><label>Your price per ${esc(l.unit)}</label><input type="number" id="ngprice" value="${Math.round(l.price * 0.9)}" step="0.01"></div>
+  <div class="fld"><label>Note (optional)</label><input id="ngnote" placeholder="e.g. standing weekly order"></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitNego('${l.id}')">Send offer</button>
+  </div>`);
+}
+function submitNego(listingId) {
+  const qty = parseInt(document.getElementById('ngqty').value) || 1;
+  const price = parseFloat(document.getElementById('ngprice').value) || 0;
+  const note = document.getElementById('ngnote').value || '';
+  state.negotiations.push({ id: uid('n'), listingId, buyerId: me().id, status: 'open', qty, price,
+    history: [{ by: me().id, qty, price, note, at: now() }] });
+  closeModal(); state.session.view = 'deals'; render();
+  toast('Offer sent to the channel owner');
+}
+function openCounterModal(negoId) {
+  const n = state.negotiations.find(x => x.id === negoId);
+  const l = listing(n.listingId);
+  openModal(`<h3>Counter-offer</h3>
+  <p class="msub">Current proposal: ${n.qty} × ${money(n.price)}/${esc(l.unit)}.</p>
+  <div class="fld"><label>Quantity</label><input type="number" id="ctqty" value="${n.qty}"></div>
+  <div class="fld"><label>Price per ${esc(l.unit)}</label><input type="number" id="ctprice" value="${n.price}" step="0.01"></div>
+  <div class="fld"><label>Note</label><input id="ctnote"></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitCounter('${n.id}')">Send counter</button>
+  </div>`);
+}
+function submitCounter(negoId) {
+  const n = state.negotiations.find(x => x.id === negoId);
+  const qty = parseInt(document.getElementById('ctqty').value) || n.qty;
+  const price = parseFloat(document.getElementById('ctprice').value) || n.price;
+  const note = document.getElementById('ctnote').value || '';
+  const iAmBuyer = n.buyerId === me().id;
+  n.qty = qty; n.price = price;
+  n.status = iAmBuyer ? 'open' : 'countered';
+  n.history.push({ by: me().id, qty, price, note, at: now() });
+  closeModal(); render(); toast('Counter sent');
+}
+
+/* ---- derive (broker re-list) modal ---- */
+function openDeriveModal(sourceListingId) {
+  const s = listing(sourceListingId); const p = product(s.productId);
+  const perBase = pricePerBase(s);
+  openModal(`<h3>Re-list under your storefront</h3>
+  <p class="msub">Source: ${esc(p.name)} — ${esc(s.unit)} of ${s.unitContains} ${esc(p.baseUnit)}s at ${money(s.price)} (${money(perBase)}/${esc(p.baseUnit)}) from ${esc(acc(s.ownerId).alias)}.
+  Your buyers will see <b>your</b> storefront, <b>your</b> unit and <b>your</b> price — never the supplier.</p>
+  <div class="fld"><label>Your sale unit name</label><input id="dvunit" value="case"></div>
+  <div class="fld"><label>${esc(p.baseUnit)}s per unit</label><input type="number" id="dvcontains" value="12" oninput="updDerive('${s.id}')"></div>
+  <div class="fld"><label>Your price per unit</label><input type="number" id="dvprice" value="${Math.ceil(perBase * 12 * 1.4)}" step="0.01" oninput="updDerive('${s.id}')"></div>
+  <div class="fld"><label>Your MOQ (units)</label><input type="number" id="dvmoq" value="5"></div>
+  <div class="meta" id="dvmath"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:12px">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitDerive('${s.id}')">Create listing</button>
+  </div>`);
+  updDerive(s.id);
+}
+function updDerive(sourceId) {
+  const s = listing(sourceId); const p = product(s.productId);
+  const contains = parseInt(document.getElementById('dvcontains').value) || 1;
+  const price = parseFloat(document.getElementById('dvprice').value) || 0;
+  const cost = pricePerBase(s) * contains;
+  const floorEdge = approved(s.ownerId, me().id, 'broker');
+  const floor = floorEdge && floorEdge.terms.priceFloor;
+  let txt = `Cost basis ${money(cost)}/unit → margin <b>${money(price - cost)}</b>/unit (${cost > 0 ? Math.round((price - cost) / cost * 100) : 0}% markup).`;
+  if (floor && price / contains < floor) txt += ` <span style="color:var(--danger)">⚠ Below the supplier's price floor of ${money(floor)}/${esc(p.baseUnit)} — supplier terms block this.</span>`;
+  document.getElementById('dvmath').innerHTML = txt;
+}
+function submitDerive(sourceId) {
+  const s = listing(sourceId); const p = product(s.productId);
+  const unit = document.getElementById('dvunit').value || 'case';
+  const contains = parseInt(document.getElementById('dvcontains').value) || 1;
+  const price = parseFloat(document.getElementById('dvprice').value) || 0;
+  const moq = parseInt(document.getElementById('dvmoq').value) || 1;
+  const floorEdge = approved(s.ownerId, me().id, 'broker');
+  if (floorEdge && floorEdge.terms.priceFloor && price / contains < floorEdge.terms.priceFloor) {
+    toast('Blocked: below the supplier’s price floor'); return;
+  }
+  state.listings.push({ id: uid('l'), ownerId: me().id, productId: s.productId, sourceId: s.id, unit, unitContains: contains,
+    price, moq, heldStock: 0, active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } });
+  closeModal(); state.session.view = 'listings'; render();
+  toast('Live — your buyers now see this under your storefront');
+}
+
+/* ---- listing edit modal ---- */
+function openListingEdit(id) {
+  const l = listing(id); const p = product(l.productId);
+  openModal(`<h3>Edit listing — ${esc(p.name)}</h3>
+  <p class="msub">${l.sourceId ? 'Derived listing (yours). Source stock and provenance stay hidden from buyers.' : 'Source listing.'}</p>
+  <div class="fld"><label>Price per ${esc(l.unit)}</label><input type="number" id="edprice" value="${l.price}" step="0.01"></div>
+  <div class="fld"><label>MOQ</label><input type="number" id="edmoq" value="${l.moq}"></div>
+  ${l.sourceId ? '' : `<div class="fld"><label>Stock (${esc(l.unit)}s)</label><input type="number" id="edstock" value="${l.stock}"></div>`}
+  <div class="fld"><label><input type="checkbox" id="edneg" ${l.negotiable ? 'checked' : ''} style="width:auto"> Accept offers (negotiable)</label></div>
+  <div class="fld"><label><input type="checkbox" id="edteaser" ${l.teaser ? 'checked' : ''} style="width:auto"> Show locked teaser to unapproved buyers</label></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitListingEdit('${l.id}')">Save</button>
+  </div>`);
+}
+function submitListingEdit(id) {
+  const l = listing(id);
+  l.price = parseFloat(document.getElementById('edprice').value) || l.price;
+  l.moq = parseInt(document.getElementById('edmoq').value) || l.moq;
+  const st = document.getElementById('edstock'); if (st) l.stock = parseInt(st.value) || l.stock;
+  l.negotiable = document.getElementById('edneg').checked;
+  l.teaser = document.getElementById('edteaser').checked;
+  closeModal(); render(); toast('Listing updated');
+}
+
+/* ---- product & source-listing modals (seller) ---- */
+function openProductModal() {
+  openModal(`<h3>Add product</h3>
+  <p class="msub">Canonical record — listings reference it. Image: pick an emoji or upload a photo.</p>
+  <div class="fld"><label>Name</label><input id="pdname" placeholder="e.g. Arborio Rice 5kg"></div>
+  <div class="fld"><label>Category</label><input id="pdcat" placeholder="Food & Beverage"></div>
+  <div class="fld"><label>Base unit (what one buyer-visible unit contains)</label><input id="pdbase" placeholder="bag"></div>
+  <div class="fld"><label>Emoji image</label><input id="pdimg" placeholder="🍚" maxlength="4" style="width:80px"></div>
+  <div class="fld"><label>…or upload a photo</label><input type="file" id="pdfile" accept="image/*"></div>
+  <div class="fld"><label>Description</label><textarea id="pddesc"></textarea></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitProduct()">Add product</button>
+  </div>`);
+}
+function submitProduct() {
+  const name = document.getElementById('pdname').value.trim();
+  if (!name) { toast('Name required'); return; }
+  const fin = document.getElementById('pdfile');
+  const done = (img) => {
+    state.products.push({ id: uid('p'), ownerId: me().id, name,
+      category: document.getElementById('pdcat').value || 'General',
+      baseUnit: document.getElementById('pdbase').value || 'unit',
+      img: img || document.getElementById('pdimg').value || '📦',
+      desc: document.getElementById('pddesc').value || '' });
+    closeModal(); render(); toast('Product added — now create a listing for it');
+  };
+  if (fin.files && fin.files[0]) {
+    const r = new FileReader();
+    r.onload = () => done(r.result);
+    r.readAsDataURL(fin.files[0]);
+  } else done(null);
+}
+function openSourceListingModal(productId) {
+  const p = product(productId);
+  openModal(`<h3>New listing — ${esc(p.name)}</h3>
+  <p class="msub">Your channel, your terms: unit of sale, price, minimums. Brokers you approve can re-list this at their own unit and markup.</p>
+  <div class="fld"><label>Sale unit name</label><input id="slunit" value="pallet"></div>
+  <div class="fld"><label>${esc(p.baseUnit)}s per unit</label><input type="number" id="slcontains" value="100"></div>
+  <div class="fld"><label>Price per unit</label><input type="number" id="slprice" value="1000" step="0.01"></div>
+  <div class="fld"><label>MOQ (units)</label><input type="number" id="slmoq" value="1"></div>
+  <div class="fld"><label>Stock (units)</label><input type="number" id="slstock" value="10"></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitSourceListing('${p.id}')">Publish listing</button>
+  </div>`);
+}
+function submitSourceListing(productId) {
+  state.listings.push({ id: uid('l'), ownerId: me().id, productId, sourceId: null,
+    unit: document.getElementById('slunit').value || 'unit',
+    unitContains: parseInt(document.getElementById('slcontains').value) || 1,
+    price: parseFloat(document.getElementById('slprice').value) || 0,
+    moq: parseInt(document.getElementById('slmoq').value) || 1,
+    stock: parseInt(document.getElementById('slstock').value) || 0,
+    active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } });
+  closeModal(); state.session.view = 'listings'; render(); toast('Listing published to your approved buyers & brokers');
+}
+
+/* ---- terms modal ---- */
+function openTermsModal(relId) {
+  const r = state.rels.find(x => x.id === relId);
+  const other = acc(r.granteeId);
+  openModal(`<h3>Relationship terms</h3>
+  <p class="msub">Your terms for <b>${esc(other.alias)}</b> (${r.kind}). Terms travel with the relationship — changing them applies immediately.</p>
+  <div class="fld"><label>Communication</label>
+    <select id="tmcomm">
+      <option value="relay" ${r.terms.comm === 'relay' ? 'selected' : ''}>Relay — I stay in the middle</option>
+      <option value="direct" ${r.terms.comm === 'direct' ? 'selected' : ''}>Direct allowed (still platform-filtered)</option>
+    </select></div>
+  <div class="fld"><label><input type="checkbox" id="tmreveal" ${r.terms.reveal ? 'checked' : ''} style="width:auto">
+    Reveal my real identity to them <span class="meta">(one-way door — think before checking)</span></label></div>
+  ${r.kind === 'broker' ? `<div class="fld"><label>Price floor per base unit (blocks re-listing below this; blank = none)</label>
+    <input type="number" id="tmfloor" value="${r.terms.priceFloor ?? ''}" step="0.01"></div>` : ''}
+  <div class="fld"><label>Minimum volume note</label><input id="tmmin" value="${esc(r.terms.minVolume || '')}" placeholder="e.g. 1 pallet per PO"></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Cancel</button>
+    <button class="btn primary" onclick="submitTerms('${r.id}')">Save terms</button>
+  </div>`);
+}
+function submitTerms(relId) {
+  const r = state.rels.find(x => x.id === relId);
+  r.terms.comm = document.getElementById('tmcomm').value;
+  r.terms.reveal = document.getElementById('tmreveal').checked;
+  const fl = document.getElementById('tmfloor');
+  if (fl) r.terms.priceFloor = fl.value === '' ? null : parseFloat(fl.value);
+  r.terms.minVolume = document.getElementById('tmmin').value;
+  closeModal(); render(); toast('Terms updated');
+}
+
+/* ---- invoice modal ---- */
+function openInvoiceModal(orderId) {
+  const o = order(orderId); const l = listing(o.listingId); const p = product(l.productId);
+  const m = me().id;
+  const iAmOwner = o.ownerId === m;
+  const fee = o.downstreamId ? 0 : +(o.total * PLATFORM_FEE).toFixed(2);
+  const isDerived = !!l.sourceId;
+  let marginBlock = '';
+  if (iAmOwner && isDerived) {
+    const cb = costBasisPerUnit(l) * o.qty;
+    marginBlock = `<div class="ledgerrow"><span>Your cost basis (pro-rata upstream)</span><span>${money(cb)}</span></div>
+    <div class="ledgerrow"><span><b>Your gross margin</b></span><span class="amt pos">${money(o.total - fee - cb)}</span></div>`;
+  }
+  openModal(`<h3>Invoice — order #${o.id}</h3>
+  <p class="msub">Documents are generated per hop with identities masked per each party's terms. This is the ${o.downstreamId ? 'wholesale (PO)' : 'retail'} hop.</p>
+  <div class="ledgerrow"><span>Seller of record</span><span>${esc(acc(o.ownerId).alias)}</span></div>
+  <div class="ledgerrow"><span>Buyer</span><span>${esc(acc(o.buyerId).alias)}</span></div>
+  <div class="ledgerrow"><span>${esc(p.name)} — ${o.qty} × ${esc(l.unit)} @ ${money(o.unitPrice)}</span><span>${money(o.total)}</span></div>
+  ${iAmOwner ? `<div class="ledgerrow"><span>Platform fee ${o.downstreamId ? '(wholesale hop — none)' : '(3%)'}</span><span>−${money(fee)}</span></div>
+  <div class="ledgerrow"><span><b>Net payout on delivery</b></span><span class="amt pos">${money(o.total - fee)}</b></span></div>` :
+  `<div class="ledgerrow"><span><b>Total (escrow)</b></span><span class="amt neg">${money(o.total)}</span></div>`}
+  ${marginBlock}
+  <div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn" onclick="closeModal()">Close</button></div>`);
+}
+
+/* ---- rating modal ---- */
+let _rateStars = 5;
+function openRateModal(orderId, targetRole) {
+  _rateStars = 5;
+  const o = order(orderId);
+  const targetId = targetRole === 'buyer' ? o.buyerId : o.ownerId;
+  openModal(`<h3>Rate ${targetRole === 'buyer' ? 'buyer' : 'your counterparty'}</h3>
+  <p class="msub">Order #${o.id} · rating ${esc(acc(targetId).alias)}. Ratings are double-blind on the real platform and attach to the storefront alias — reputation without exposure.</p>
+  <div class="starpick" id="starpick">${[1,2,3,4,5].map(i => `<span class="on" data-i="${i}" onclick="pickStars(${i})">★</span>`).join('')}</div>
+  <div class="fld" style="margin-top:10px"><label>Comment</label><textarea id="ratetext" placeholder="Accuracy, communication, fulfillment speed…"></textarea></div>
+  <div class="row" style="justify-content:flex-end">
+    <button class="btn" onclick="closeModal()">Skip</button>
+    <button class="btn primary" onclick="submitRating('${o.id}','${targetRole}')">Submit rating</button>
+  </div>`);
+}
+function pickStars(n) {
+  _rateStars = n;
+  document.querySelectorAll('#starpick span').forEach(s => s.classList.toggle('on', +s.dataset.i <= n));
+}
+function submitRating(orderId, targetRole) {
+  const o = order(orderId);
+  const targetId = targetRole === 'buyer' ? o.buyerId : o.ownerId;
+  state.reviews.push({ id: uid('rv'), orderId, raterId: me().id, targetId,
+    asRole: targetRole, stars: _rateStars, text: document.getElementById('ratetext').value || '', at: now() });
+  if (targetRole === 'buyer') o.ratedByOwner = true; else o.ratedByBuyer = true;
+  closeModal(); render(); toast('Rating submitted — attached to their storefront alias');
+}
+
+/* ---- intro / guide ---- */
+function openIntro() {
+  openModal(`<h3>◈ TradeMesh — how this prototype works</h3>
+  <p class="msub">A gated wholesale marketplace. Nothing is public: sellers approve brokers, sellers & brokers approve buyers, and identities stay masked behind storefront aliases until the relationship owner reveals them. Brokers re-list suppliers' goods under their own storefront — their unit, their price — and to buyers they look exactly like sellers.</p>
+  <p class="msub"><b>Use the “Acting as” switcher</b> (top right) to play every side. A good tour:</p>
+  <ol style="font-size:13px;line-height:1.7;color:var(--text-2);padding-left:18px">
+    <li><b>Sam's Corner Market</b> (buyer): Marketplace shows olive oil with <b>3 offers</b> — two brokers selling cases, one locked pallet teaser from the seller. Order 10 cases from Nexus. Try messaging with a phone number in it.</li>
+    <li><b>Nexus Trading</b> (broker): see the order auto-route into an upstream PO; check Source Catalog, re-list something with your own markup; relay a buyer question to the supplier.</li>
+    <li><b>Atlas Foods</b> (seller): confirm & ship the upstream PO (blind drop-ship, broker's branding); approve the pending broker request; edit relationship terms — flip comms to direct, set a price floor, reveal identity.</li>
+    <li>Back to <b>Sam</b>: confirm delivery → watch escrow split in everyone's Wallet → rate the storefront.</li>
+  </ol>
+  <p class="msub">Everything is local to your browser (localStorage). ↺ Reset restores this demo scenario. The full platform design lives in <b>BLUEPRINT.md</b> next to this file.</p>
+  <div class="row" style="justify-content:flex-end"><button class="btn primary" onclick="closeModal();state.session.seenIntro=true;save()">Got it</button></div>`);
+}
+
+/* ============ BOOT ============ */
+render();
+if (!state.session.seenIntro) openIntro();
+</script>
+</body>
+</html>
