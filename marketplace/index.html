@@ -3,32 +3,36 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<meta name="theme-color" content="#0b0d12" />
+<meta name="theme-color" content="#f6f5f1" />
 <title>TradeMesh — Broker Network Marketplace (Prototype)</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230ea5a3'/%3E%3Cpath d='M14 40l12-16 8 10 6-7 10 13' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23047857'/%3E%3Cpath d='M14 40l12-16 8 10 6-7 10 13' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
 <style>
-  /* ============ DESIGN TOKENS (Focus Deck family) ============ */
+  /* ============ DESIGN TOKENS — "Ledger" direction ============
+     Paper-white surfaces, ink-navy text, deep emerald accent, serif
+     headlines. Dark variant keeps the same brand character. */
   :root {
-    --bg: #0a0c10; --bg-soft: #11141b; --panel: #161a23; --panel-2: #1b1f2a;
-    --line: #242938; --line-soft: #1c202c;
-    --text: #ecf0f7; --text-2: #c6ccdc; --muted: #818aa1;
-    --accent: #0ea5a3; --accent-2: #5cc8ff;
-    --accent-soft: rgba(14,165,163,.12); --accent-ring: rgba(14,165,163,.30);
-    --ok: #22c55e; --warn: #f59e0b; --danger: #ef4444; --gold: #fbbf24; --violet: #8b5cf6;
-    --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px;
+    --bg: #f6f5f1; --bg-soft: #efede6; --panel: #ffffff; --panel-2: #f6f4ee;
+    --line: #e4e1d6; --line-soft: #eceade;
+    --text: #1c2433; --text-2: #465062; --muted: #7d8494;
+    --accent: #047857; --accent-2: #0f766e;
+    --accent-soft: rgba(4,120,87,.08); --accent-ring: rgba(4,120,87,.25);
+    --ok: #047857; --warn: #b45309; --danger: #b91c1c; --gold: #a16207; --violet: #6d28d9;
+    --r-sm: 5px; --r-md: 8px; --r-lg: 11px; --r-xl: 16px;
+    --shadow-sm: 0 1px 2px rgba(28,36,51,.06);
+    --shadow-md: 0 2px 6px rgba(28,36,51,.06), 0 1px 2px rgba(28,36,51,.04);
+    --shadow-lg: 0 10px 30px rgba(28,36,51,.10), 0 2px 8px rgba(28,36,51,.05);
+    --ease: cubic-bezier(.22,.61,.36,1);
+  }
+  [data-theme="dark"] {
+    --bg: #10141f; --bg-soft: #171c2a; --panel: #1a2130; --panel-2: #202839;
+    --line: #2a3347; --line-soft: #232b3d;
+    --text: #e9ecf4; --text-2: #c3cad9; --muted: #8791a5;
+    --accent: #10b981; --accent-2: #34d399;
+    --accent-soft: rgba(16,185,129,.12); --accent-ring: rgba(16,185,129,.30);
+    --ok: #34d399; --warn: #fbbf24; --danger: #ef4444; --gold: #fbbf24; --violet: #a78bfa;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.18);
     --shadow-md: 0 2px 6px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.10);
     --shadow-lg: 0 12px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.10);
-    --ease: cubic-bezier(.22,.61,.36,1);
-  }
-  [data-theme="light"] {
-    --bg: #f7f8fb; --bg-soft: #eef0f6; --panel: #ffffff; --panel-2: #f5f7fb;
-    --line: #e2e6ef; --line-soft: #ecedf3;
-    --text: #131722; --text-2: #3b4256; --muted: #6b7387;
-    --accent-soft: rgba(14,165,163,.10); --accent-ring: rgba(14,165,163,.22);
-    --shadow-sm: 0 1px 2px rgba(20,25,45,.06);
-    --shadow-md: 0 2px 6px rgba(20,25,45,.06), 0 1px 2px rgba(20,25,45,.04);
-    --shadow-lg: 0 10px 30px rgba(20,25,45,.10), 0 2px 8px rgba(20,25,45,.05);
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
@@ -36,8 +40,8 @@
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
     background:
-      radial-gradient(1000px 500px at 85% -15%, rgba(14,165,163,.10), transparent 60%),
-      radial-gradient(800px 420px at -10% 115%, rgba(92,200,255,.06), transparent 60%),
+      radial-gradient(1000px 500px at 85% -15%, rgba(4,120,87,.05), transparent 60%),
+      radial-gradient(800px 420px at -10% 115%, rgba(15,118,110,.04), transparent 60%),
       var(--bg);
     color: var(--text);
     -webkit-font-smoothing: antialiased;
@@ -62,7 +66,7 @@
   }
   .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
   .btn:active { transform: translateY(1px); }
-  .btn.primary { background: linear-gradient(180deg, #14b8b6 0%, #0d8f8d 100%); color: #fff; border-color: transparent; }
+  .btn.primary { background: linear-gradient(180deg, #059669 0%, #047857 100%); color: #fff; border-color: transparent; }
   .btn.primary:hover { filter: brightness(1.08); }
   .btn.danger { color: var(--danger); }
   .btn.danger:hover { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.45); }
@@ -79,7 +83,11 @@
   .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; }
   .brand .logo {
     width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
-    background: linear-gradient(135deg, #14b8b6, #0d8f8d); color: #fff; font-size: 15px;
+    background: linear-gradient(135deg, #059669, #047857); color: #fff; font-size: 15px;
+  }
+  /* Ledger serif voice: headlines, brand, money */
+  .brand, h1.viewtitle, h2.sec, #modal h3, .price {
+    font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0;
   }
   .brand .proto { font-size: 10px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); padding: 2px 6px; border-radius: 99px; letter-spacing: .04em; }
   #actingas {
@@ -380,7 +388,7 @@ function seed() {
       { id: 'rv2', orderId: 'o1', raterId: 'a_atlas', targetId: 'a_river', asRole: 'buyer',        stars: 5, text: 'Paid instantly, easy to work with.', at: t0 + 3 * DAY },
     ],
     invites: [],
-    session: { actingAs: 'a_sam', view: 'market', openThread: null, theme: 'dark', seenIntro: false },
+    session: { actingAs: 'a_sam', view: 'market', openThread: null, theme: 'light', seenIntro: false },
   };
 }
 
@@ -388,7 +396,12 @@ let state = load();
 function load() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (raw) { const s = JSON.parse(raw); _uid = s.uidBase || 500; return s; }
+    if (raw) {
+      const s = JSON.parse(raw); _uid = s.uidBase || 500;
+      // one-time migration to the Ledger skin: light becomes the default
+      if (!s.ledgerSkin) { s.ledgerSkin = 1; s.session.theme = 'light'; }
+      return s;
+    }
   } catch (e) {}
   return seed();
 }
@@ -594,7 +607,7 @@ function badgeSources() {
 }
 
 function render() {
-  document.documentElement.dataset.theme = state.session.theme === 'light' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = state.session.theme === 'dark' ? 'dark' : 'light';
   // acting-as switcher
   const sel = document.getElementById('whoami');
   sel.innerHTML = state.accounts.map(a =>
