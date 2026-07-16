@@ -77,6 +77,15 @@ This is the heart of the deal. By using the Platform, every Participant agrees:
   may re-list per the Edge Terms, and may not represent the goods as their own manufacture, may
   not exceed authorization scope (e.g., price floors, territories if set), and loses derived
   listings automatically if the approval is revoked.
+- **Channel precedence (discovery shielding & bands).** A Broker's suppliers are not
+  discoverable by that Broker's Buyers unless the Broker allows it; where a shield applies,
+  direct Seller↔Buyer relationships form only by Seller-initiated invitation. When a Buyer holds
+  both a direct Seller channel and Broker channels for the same item, order quantities partition
+  at the Seller's minimum (Seller serves their band; Brokers serve below it), and Broker offers
+  inside the Seller's band are suppressed regardless of price. A Buyer may remove an item from
+  their direct channel to restore Broker options; restoring the direct channel afterward is at
+  the Seller's discretion. Participants agree the Platform enforces these visibility rules
+  mechanically and that they are not a warranty of best price.
 
 ## 5. Willing & responsible entry into every transaction
 

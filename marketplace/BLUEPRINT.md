@@ -198,6 +198,8 @@ you:
 
 - **Sponsored listings**: pay to pin a listing at the top of the marketplace for buyers already
   in your channel. (CPC or flat-fee-per-week to start; auctions later.)
+- **Recruiting ads flow one tier down** (see §13): sellers advertise masked to brokers ("join my
+  channel"), brokers advertise to buyers. Never past a discovery shield.
 - **Category boosts** in locked-teaser space: a seller can pay to make their *teaser* more
   prominent to unapproved buyers ("someone in your category sells this — request access").
 - **Storefront features**: featured placement in the broker directory sellers browse when
@@ -238,7 +240,68 @@ you:
 11. **Tiered subscriptions**: free + take-rate to start; Pro tiers (lower take rate, more
     sponsored slots, API access, multiple storefront aliases) once liquidity exists.
 
-## 13. Broker verticals — one graph, many markets
+## 13. Broker protection & channel precedence (the disintermediation firewall)
+
+Premise: in wholesale, **availability, MOQ flexibility, and trust beat price within reason** —
+so the platform protects intermediation by construction instead of racing every deal to the
+cheapest hop. These rules make cutting out the middleman structurally unattractive.
+
+### Discovery shielding
+
+- A broker's suppliers are **invisible to that broker's buyers by default** — no teasers, no
+  directory entries, no access requests. If a buyer purchases through broker B and B sources
+  from seller S, the buyer cannot discover S exists on the platform.
+- The broker can lift the shield per supplier ("allow my buyers to discover this supplier") —
+  the broker's call alone, never the buyer's or the seller's.
+- Multiple brokers, mixed settings → **the most protective setting wins**: shielded if *any* of
+  the buyer's brokers sources from that seller and keeps the shield on.
+- Shielding gates **discovery only** — it never hides or breaks relationships that already
+  exist. A buyer who was direct with a seller before joining a broker stays direct.
+
+### Going direct is seller-initiated only
+
+- Where a shield applies, the buyer has no request path to the supplier. The only way a direct
+  seller↔buyer relationship forms there is a **seller-initiated invite**, which the buyer may
+  accept or decline. (The seller weighs one direct buyer against the broker relationship that
+  moves volume across many buyers — that tension is intentional.)
+- Recruiting ads flow one tier down, never past a shield: sellers advertise (masked) to brokers
+  to join their channels; brokers advertise to buyers. Sellers do not advertise direct-to-buyer
+  around a broker's shield.
+
+### Band partition when direct + broker coexist
+
+When a buyer holds both a direct seller channel and broker channels for the same product:
+
+- Quantity bands partition at the seller's unit/MOQ: **the seller's band is the seller's**
+  (1 pallet and up), **below it belongs to brokers** (1 case up to just under a pallet). The
+  buyer sees both, labeled, and picks by quantity need.
+- **Relationship precedence beats price**: inside the seller's band, broker offers are
+  suppressed *even when cheaper*. There is no "cheaper through my broker" arbitrage against a
+  seller who chose to go direct; the seller's price-floor terms already bound the other
+  direction.
+- Open negotiations and orders are grandfathered at their existing terms when a direct invite
+  lands mid-deal.
+
+### Item removal & re-add at seller discretion
+
+- A buyer who prefers broker options for a specific item may **remove that item from their
+  direct channel** — the direct offer disappears and broker offers repopulate uncapped (any
+  broker, not just the original one).
+- Getting the item back on the direct channel is **at the seller's discretion** (request →
+  approve/decline). Dropping direct is easy; regaining it is not guaranteed — which makes
+  dropping a broker a real decision, not a toggle to flip for one cheap order.
+
+### Fee schedule favors intermediated flow
+
+- **Broker volume tiers**: the platform fee on a broker's retail hop steps down with delivered
+  volume (launch schedule: 3% → 2.5% at $10k → 2% at $50k) — productive brokers keep more
+  margin the more they move.
+- **Seller-side discount**: any seller-facing fees are lower on broker-routed volume than on
+  direct volume — selling through brokers is the cheaper way to sell.
+- Net effect: the platform's own economics reward keeping brokers in the deal, reinforcing the
+  anti-circumvention terms instead of fighting them.
+
+## 14. Broker verticals — one graph, many markets
 
 The relationship graph, identity masking, relay messaging, ratings, and ads are
 **vertical-agnostic**. What changes per vertical is the *fulfillment object* (what a completed
@@ -291,7 +354,7 @@ already works hard to protect their source. What the goods core needs added for 
   natural bridge into the freight vertical.
 - **All-sales-final flags** with grade-dependent dispute windows.
 
-## 14. Data model (entities → real schema later)
+## 15. Data model (entities → real schema later)
 
 ```
 Account          id, legalName, verified, kycStatus, createdAt
@@ -320,7 +383,7 @@ Dispute          id, orderId, openedBy, status, resolution, escrowHold
 AuditEvent       id, actorId, entity, action, before/after, at
 ```
 
-## 15. Tech roadmap
+## 16. Tech roadmap
 
 | Phase | What | Stack |
 |---|---|---|
@@ -333,13 +396,13 @@ AuditEvent       id, actorId, entity, action, before/after, at
 the relationship graph" — encoding that once, at the database layer, prevents the entire class
 of identity-leak bugs that would kill trust in a masked marketplace.
 
-## 16. Open questions to settle with real users
+## 17. Open questions to settle with real users
 
 - Take rate: flat % vs. per-role (charge the broker's margin, not the seller's base?).
 - Should sellers see the broker's resale price? (Price floor says yes at least partially.)
 - Reveal economics: free after N orders vs. paid conversion fee.
 - Who eats payment processing on multi-hop splits.
-- ~~Category to launch with~~ **Decided: wholesale closeouts/liquidation** (see §13) — the
+- ~~Category to launch with~~ **Decided: wholesale closeouts/liquidation** (see §14) — the
   broker model's natural home. Remaining sub-question: which closeout niche first (general
   merchandise, apparel, electronics returns?).
 

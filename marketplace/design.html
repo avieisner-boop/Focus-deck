@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>TradeMesh — Design Directions</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230ea5a3'/%3E%3Ccircle cx='22' cy='32' r='9' fill='white'/%3E%3Ccircle cx='42' cy='32' r='9' fill='white' opacity='.55'/%3E%3C/svg%3E" />
+<style>
+  /* ============ THEME TOKENS — four directions, same components ============ */
+  body[data-dir="ledger"] {
+    --bg: #f6f5f1; --panel: #ffffff; --panel2: #f3f1ea; --line: #e4e1d6; --line2: #eceade;
+    --text: #1c2433; --text2: #465062; --muted: #7d8494;
+    --accent: #047857; --accent-ink: #ffffff; --accent-soft: rgba(4,120,87,.09); --accent-line: rgba(4,120,87,.35);
+    --ok: #047857; --warn: #b45309; --danger: #b91c1c; --gold: #a16207;
+    --radius: 8px; --radius-lg: 12px;
+    --font-head: Georgia, 'Times New Roman', serif; --head-weight: 700; --head-track: 0;
+    --shadow: 0 1px 2px rgba(28,36,51,.06);
+  }
+  body[data-dir="carbon"] {
+    --bg: #0b0e14; --panel: #141926; --panel2: #1a2030; --line: #242b3d; --line2: #1e2434;
+    --text: #e9edf5; --text2: #b9c1d4; --muted: #7c869e;
+    --accent: #38bdf8; --accent-ink: #06202e; --accent-soft: rgba(56,189,248,.12); --accent-line: rgba(56,189,248,.35);
+    --ok: #34d399; --warn: #fbbf24; --danger: #f87171; --gold: #fbbf24;
+    --radius: 10px; --radius-lg: 14px;
+    --font-head: inherit; --head-weight: 650; --head-track: -0.02em;
+    --shadow: 0 2px 8px rgba(0,0,0,.32);
+  }
+  body[data-dir="cargo"] {
+    --bg: #faf5ec; --panel: #fffdf8; --panel2: #f5eede; --line: #e8dfc9; --line2: #efe8d6;
+    --text: #2b2417; --text2: #5b5240; --muted: #8d8370;
+    --accent: #b45309; --accent-ink: #ffffff; --accent-soft: rgba(180,83,9,.10); --accent-line: rgba(180,83,9,.38);
+    --ok: #3f6212; --warn: #b45309; --danger: #b91c1c; --gold: #a16207;
+    --radius: 14px; --radius-lg: 18px;
+    --font-head: inherit; --head-weight: 800; --head-track: -0.03em;
+    --shadow: 0 1px 3px rgba(43,36,23,.08);
+  }
+  body[data-dir="indigo"] {
+    --bg: #f5f6fa; --panel: #ffffff; --panel2: #f1f2f8; --line: #e3e5f0; --line2: #eaecf5;
+    --text: #191d2e; --text2: #454b64; --muted: #7b8199;
+    --accent: #4f46e5; --accent-ink: #ffffff; --accent-soft: rgba(79,70,229,.09); --accent-line: rgba(79,70,229,.32);
+    --ok: #15803d; --warn: #b45309; --danger: #be123c; --gold: #a16207;
+    --radius: 12px; --radius-lg: 16px;
+    --font-head: inherit; --head-weight: 700; --head-track: -0.02em;
+    --shadow: 0 2px 6px rgba(25,29,46,.07);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased; letter-spacing: -0.004em;
+    transition: background .25s ease;
+  }
+  h1, h2, h3, .headfont { font-family: var(--font-head); font-weight: var(--head-weight); letter-spacing: var(--head-track); }
+
+  /* ============ PAGE CHROME ============ */
+  #hero { max-width: 1120px; margin: 0 auto; padding: 34px 20px 6px; }
+  #hero h1 { font-size: 26px; margin: 0 0 6px; }
+  #hero p { color: var(--text2); font-size: 14px; line-height: 1.55; margin: 0; max-width: 72ch; }
+
+  #tabs {
+    position: sticky; top: 0; z-index: 30; backdrop-filter: blur(10px);
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    border-bottom: 1px solid var(--line);
+    margin-top: 18px; padding: 10px 20px;
+  }
+  #tabs .inner { max-width: 1120px; margin: 0 auto; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .tab {
+    display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--text); font: inherit; font-weight: 600; font-size: 13px;
+  }
+  .tab .dot { width: 12px; height: 12px; border-radius: 99px; }
+  .tab.active { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  #dirnote { max-width: 1120px; margin: 12px auto 0; padding: 0 20px; color: var(--text2); font-size: 13.5px; line-height: 1.5; }
+
+  #palette { max-width: 1120px; margin: 14px auto 0; padding: 0 20px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch { display: flex; flex-direction: column; gap: 4px; font-size: 10.5px; color: var(--muted); }
+  .swatch .chipc { width: 86px; height: 34px; border-radius: 8px; border: 1px solid var(--line); }
+
+  #screens { max-width: 1120px; margin: 20px auto 80px; padding: 0 20px; display: grid; grid-template-columns: 1fr; gap: 22px; }
+  @media (min-width: 1000px) { #screens { grid-template-columns: 1fr 1fr; } .screen.wide { grid-column: 1 / -1; } }
+
+  /* ============ MOCKUP FRAME ============ */
+  .screen {
+    background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow); overflow: hidden;
+  }
+  .screen .bar {
+    display: flex; align-items: center; gap: 10px; padding: 11px 16px;
+    border-bottom: 1px solid var(--line2); background: color-mix(in srgb, var(--panel2) 60%, var(--panel));
+  }
+  .screen .bar .mark { width: 22px; height: 22px; border-radius: 7px; background: var(--accent); display: grid; place-items: center; color: var(--accent-ink); font-size: 12px; font-weight: 800; }
+  .screen .bar b { font-size: 13px; }
+  .screen .bar .crumb { color: var(--muted); font-size: 12px; margin-left: auto; }
+  .screen .body { padding: 16px; }
+
+  /* ============ COMPONENTS ============ */
+  .fld { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .fld label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .inp, .sel {
+    background: var(--panel2); border: 1px solid var(--line); color: var(--text);
+    border-radius: var(--radius); padding: 9px 12px; font: inherit; font-size: 13.5px; width: 100%;
+  }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .row.between { justify-content: space-between; }
+  .grid2c { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px; cursor: default;
+    padding: 8px 13px; border-radius: var(--radius); border: 1px solid var(--line);
+    background: var(--panel2); color: var(--text); font: inherit; font-size: 13px; font-weight: 600;
+  }
+  .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .btn.ghost { background: transparent; }
+  .btn.sm { padding: 5px 10px; font-size: 12px; }
+  .btn.danger { color: var(--danger); }
+  .chip {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2.5px 9px; border-radius: 99px;
+    font-size: 11px; font-weight: 650; border: 1px solid var(--line); color: var(--text2); background: var(--panel2);
+  }
+  .chip.acc { color: var(--accent); background: var(--accent-soft); border-color: var(--accent-line); }
+  .chip.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 9%, transparent); border-color: color-mix(in srgb, var(--ok) 35%, transparent); }
+  .chip.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, transparent); border-color: color-mix(in srgb, var(--warn) 35%, transparent); }
+  .chip.danger { color: var(--danger); background: color-mix(in srgb, var(--danger) 9%, transparent); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+  .hint { font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .hint b { color: var(--text2); }
+  .toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text2); }
+  .knob { width: 34px; height: 20px; border-radius: 99px; background: var(--line); position: relative; flex-shrink: 0; }
+  .knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 99px; background: var(--panel); }
+  .knob.on { background: var(--accent); }
+  .knob.on::after { left: 16px; background: var(--accent-ink); }
+  .hr { border: 0; border-top: 1px solid var(--line2); margin: 14px 0; }
+
+  /* profile */
+  .avatarbox { width: 58px; height: 58px; border-radius: var(--radius); background: var(--panel2); border: 1px solid var(--line); display: grid; place-items: center; font-size: 30px; }
+  .stars { color: var(--gold); font-size: 13px; }
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .tile { background: var(--panel2); border: 1px solid var(--line2); border-radius: var(--radius); padding: 10px 12px; }
+  .tile .v { font-size: 17px; font-weight: 750; font-family: var(--font-head); letter-spacing: var(--head-track); }
+  .tile .k { font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
+  @media (max-width: 560px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+
+  /* network board */
+  .cols { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  @media (min-width: 620px) { .cols { grid-template-columns: 1fr 1fr 1fr; } }
+  .col h4 { margin: 0 0 8px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; }
+  .relcard { background: var(--panel2); border: 1px solid var(--line2); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
+  .relcard .who { font-weight: 650; font-size: 13px; display: flex; gap: 7px; align-items: center; }
+  .relcard .ava { width: 22px; height: 22px; border-radius: 7px; background: var(--panel); border: 1px solid var(--line); display: grid; place-items: center; font-size: 12px; }
+  .relcard .terms { display: flex; gap: 4px; flex-wrap: wrap; margin: 7px 0; }
+  .relcard .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+
+  /* messages */
+  .msgwrap { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 640px) { .msgwrap { grid-template-columns: 1.15fr .85fr; } }
+  .bubble { max-width: 88%; padding: 8px 12px; border-radius: 13px; font-size: 13px; line-height: 1.45; background: var(--panel2); border: 1px solid var(--line2); margin-bottom: 4px; }
+  .mine { margin-left: auto; background: var(--accent-soft); border-color: var(--accent-line); }
+  .msub { font-size: 10.5px; color: var(--muted); margin: 0 4px 10px; }
+  .mine + .msub { text-align: right; }
+  .redact { background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); border-radius: 4px; padding: 0 5px; font-size: 11.5px; font-weight: 650; }
+  .negopanel { background: var(--panel2); border: 1px solid var(--line2); border-radius: var(--radius); padding: 12px; }
+  .negopanel h5 { margin: 0 0 8px; font-size: 12px; }
+  .hist { font-size: 12px; color: var(--text2); line-height: 1.7; margin: 0 0 10px; padding-left: 16px; }
+  .bignum { font-family: var(--font-head); font-weight: 750; font-size: 21px; letter-spacing: var(--head-track); }
+
+  footer { max-width: 1120px; margin: 0 auto 50px; padding: 0 20px; color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body data-dir="ledger">
+
+<div id="hero">
+  <h1>TradeMesh — design directions</h1>
+  <p>Same four screens — <b>create listing, storefront profile, network board, messages & negotiation</b> —
+  rendered in four different design systems. Tap a direction to reskin everything instantly and compare
+  apples to apples. All are B2B-clean: quiet surfaces, one accent, dense but breathable.</p>
+</div>
+
+<div id="tabs"><div class="inner" id="tabrow"></div></div>
+<div id="dirnote"></div>
+<div id="palette"></div>
+
+<div id="screens">
+
+  <!-- ============ SCREEN 1: CREATE LISTING ============ -->
+  <div class="screen">
+    <div class="bar"><span class="mark">◈</span><b>Create listing</b><span class="crumb">My Listings → New</span></div>
+    <div class="body">
+      <div class="fld"><label>Product</label>
+        <div class="sel row between"><span>🫒 Organic Extra-Virgin Olive Oil 1L</span><span style="color:var(--muted)">▾</span></div>
+      </div>
+      <div class="grid2c">
+        <div class="fld"><label>Sale unit</label><div class="inp">case</div></div>
+        <div class="fld"><label>Bottles per unit</label><div class="inp">12</div></div>
+        <div class="fld"><label>Price per case</label><div class="inp">$69.00</div></div>
+        <div class="fld"><label>MOQ (cases)</label><div class="inp">5</div></div>
+      </div>
+      <p class="hint">Cost basis <b>$48.00/case</b> from your supplier → margin <b>$21.00/case (44%)</b>.
+      Supplier price floor $5.00/bottle — you're clear at $5.75. ✓</p>
+      <hr class="hr">
+      <div class="grid2c">
+        <div class="fld"><label>Condition grade</label>
+          <div class="sel row between"><span>Shelf-pull</span><span style="color:var(--muted)">▾</span></div>
+        </div>
+        <div class="fld"><label>Manifest</label>
+          <div class="inp row between"><span>📄 manifest.xlsx</span><span class="chip ok">214 lines ✓</span></div>
+        </div>
+      </div>
+      <div class="row" style="margin: 4px 0 14px">
+        <span class="toggle"><span class="knob on"></span> Accept offers</span>
+        <span class="toggle"><span class="knob on"></span> Locked teaser visible</span>
+        <span class="toggle"><span class="knob"></span> Sponsor $25/wk</span>
+      </div>
+      <div class="row between">
+        <span class="hint">Visible only to buyers <b>you approve</b> — never public.</span>
+        <span class="row"><span class="btn ghost">Save draft</span><span class="btn primary">Publish to my channel</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 2: STOREFRONT PROFILE ============ -->
+  <div class="screen">
+    <div class="bar"><span class="mark">◈</span><b>Storefront profile</b><span class="crumb">Settings → Storefront</span></div>
+    <div class="body">
+      <div class="row">
+        <div class="avatarbox">🫒</div>
+        <div style="flex:1; min-width:200px">
+          <div class="row"><b class="headfont" style="font-size:16px">Golden Harvest Wholesale</b>
+            <span class="chip acc">✓ Verified business</span></div>
+          <div class="row" style="margin-top:4px"><span class="stars">★★★★★</span>
+            <span class="hint"><b>4.8</b> · 23 completed orders</span></div>
+        </div>
+        <span class="btn sm">Preview as buyer</span>
+      </div>
+      <p class="hint" style="margin:10px 0 0">Legal identity: <b>hidden</b> — revealed per relationship, your call, one-way.
+      Buyers and brokers only ever see this storefront.</p>
+      <div class="tiles">
+        <div class="tile"><div class="v">$128k</div><div class="k">GMV · 90d</div></div>
+        <div class="tile"><div class="v">47</div><div class="k">Orders</div></div>
+        <div class="tile"><div class="v">98%</div><div class="k">On-time</div></div>
+        <div class="tile"><div class="v">1.2h</div><div class="k">Response</div></div>
+      </div>
+      <hr class="hr">
+      <div class="fld"><label>Tagline</label><div class="inp">Mediterranean pantry staples, importer-direct</div></div>
+      <div class="grid2c">
+        <div class="fld"><label>Default reveal policy</label>
+          <div class="sel row between"><span>Never auto-reveal</span><span style="color:var(--muted)">▾</span></div></div>
+        <div class="fld"><label>Categories</label>
+          <div class="inp row"><span class="chip">Food & Beverage</span><span class="chip">Closeouts</span></div></div>
+      </div>
+      <div class="row" style="justify-content:flex-end"><span class="btn primary">Save profile</span></div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 3: NETWORK BOARD ============ -->
+  <div class="screen wide">
+    <div class="bar"><span class="mark">◈</span><b>Network board</b><span class="crumb">My Network</span></div>
+    <div class="body">
+      <div class="cols">
+        <div class="col">
+          <h4>Buyers · 12</h4>
+          <div class="relcard">
+            <div class="who"><span class="ava">🛒</span> Neighborhood Grocer #2214 <span class="chip warn">pending</span></div>
+            <p class="hint" style="margin:6px 0">Trade profile: 9 completed orders · ★4.6 as buyer</p>
+            <div class="acts"><span class="btn sm primary">Approve</span><span class="btn sm">Terms…</span><span class="btn sm danger">Decline</span></div>
+          </div>
+          <div class="relcard">
+            <div class="who"><span class="ava">🥪</span> Riverside Deli Co <span class="chip ok">approved</span></div>
+            <div class="terms"><span class="chip">↔ direct comms</span><span class="chip">masked</span><span class="chip warn">re-add request: Olive Oil</span></div>
+            <div class="acts"><span class="btn sm primary">Approve re-add</span><span class="btn sm">Terms</span><span class="btn sm danger">Revoke</span></div>
+          </div>
+        </div>
+        <div class="col">
+          <h4>Brokers · 4</h4>
+          <div class="relcard">
+            <div class="who"><span class="ava">🔗</span> Nexus Sourcing Group <span class="chip ok">approved</span></div>
+            <div class="terms"><span class="chip">🔁 relay comms</span><span class="chip">floor $5.00/bottle</span><span class="chip">min 1 pallet</span></div>
+            <div class="acts"><span class="btn sm">Terms</span><span class="btn sm">Re-listings (3)</span><span class="btn sm danger">Revoke</span></div>
+          </div>
+          <div class="relcard">
+            <div class="who"><span class="ava">🌊</span> Pacific Trade Partners <span class="chip warn">requested</span></div>
+            <p class="hint" style="margin:6px 0">★4.9 as broker · moves $60k/mo in your category</p>
+            <div class="acts"><span class="btn sm primary">Approve</span><span class="btn sm danger">Decline</span></div>
+          </div>
+        </div>
+        <div class="col">
+          <h4>My suppliers · 6</h4>
+          <div class="relcard">
+            <div class="who"><span class="ava">🏭</span> Coastal Mills Supply <span class="chip ok">approved</span></div>
+            <div class="terms"><span class="chip acc">🛡 shielded from my buyers</span><span class="chip">their floor: $3.10</span></div>
+            <div class="acts"><span class="btn sm">Allow discovery</span><span class="btn sm">Source catalog</span></div>
+          </div>
+          <div class="relcard">
+            <div class="who"><span class="ava">🧵</span> Loom & Thread Supply <span class="chip warn">pending</span></div>
+            <p class="hint" style="margin:6px 0">Requested 2d ago — awaiting their decision</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCREEN 4: MESSAGES & NEGOTIATION ============ -->
+  <div class="screen">
+    <div class="bar"><span class="mark">◈</span><b>Messages & negotiation</b><span class="crumb">Re: Olive Oil · Neighborhood Grocer #2214</span></div>
+    <div class="body">
+      <div class="msgwrap">
+        <div>
+          <div class="row" style="margin-bottom:10px"><span class="chip acc">🔁 relay channel — you're the middleman</span></div>
+          <div class="bubble">Is this the current harvest? Also can you do weekly delivery — reach me at <span class="redact">[contact info removed]</span></div>
+          <div class="msub">Neighborhood Grocer #2214 · 2h · <span style="color:var(--danger)">⚑ flagged</span> · <u>relay to supplier ⇪</u></div>
+          <div class="bubble mine">November pressing — confirming best-by with the supplier now. Weekly works; let's keep it on-platform.</div>
+          <div class="msub">You · 1h</div>
+          <div class="bubble">⇩ From the supplier: “Best-by is 24 months from the November pressing.”</div>
+          <div class="msub">relayed · 20m</div>
+          <div class="row"><div class="inp" style="flex:1; color:var(--muted)">Write a reply… (contacts & links auto-removed)</div><span class="btn primary sm">Send</span></div>
+        </div>
+        <div class="negopanel">
+          <h5>OFFER · 🫒 Olive Oil 1L — case of 12</h5>
+          <ul class="hist">
+            <li>They offered <b>20 × $62.00</b> — “standing weekly order”</li>
+            <li>You countered <b>20 × $65.00</b> — “hold for 30 days”</li>
+          </ul>
+          <div class="row between" style="margin-bottom:10px">
+            <span class="bignum">20 × $65.00</span>
+            <span class="chip warn">their move</span>
+          </div>
+          <div class="hint" style="margin-bottom:10px">List $69 · your floor $58 (cost + fee) · accepted price becomes a <b>private tier</b> for this buyer only.</div>
+          <div class="row">
+            <span class="btn primary sm">Accept $65</span>
+            <span class="btn sm">Counter…</span>
+            <span class="btn sm danger">Decline</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  Working prototype (dark, functional): <a href="index.html">marketplace/index.html</a> · full design doc: BLUEPRINT.md.
+  Pick a direction (or a mix — e.g. Carbon's density with Ledger's palette) and the prototype gets reskinned to match.
+</footer>
+
+<script>
+const DIRS = {
+  ledger: {
+    label: 'A · Ledger', dot: '#047857',
+    note: '“Ledger” — paper-white surfaces, ink-navy text, deep emerald accent, serif headlines. The trust/finance lane (think Mercury or a well-set contract). Reads calm and credible to sellers moving real money; the serif keeps it from feeling like every other SaaS.',
+    palette: [['bg','#f6f5f1'],['panel','#ffffff'],['text','#1c2433'],['accent','#047857'],['ok','#047857'],['warn','#b45309'],['danger','#b91c1c']],
+  },
+  carbon: {
+    label: 'B · Carbon', dot: '#38bdf8',
+    note: '“Carbon” — the dark, dense, terminal-adjacent direction (Linear energy; closest to the current prototype). Best for power users living in the app all day: brokers watching order flow, routing, margins. Sky-blue accent on near-black keeps long sessions easy on the eyes.',
+    palette: [['bg','#0b0e14'],['panel','#141926'],['text','#e9edf5'],['accent','#38bdf8'],['ok','#34d399'],['warn','#fbbf24'],['danger','#f87171']],
+  },
+  cargo: {
+    label: 'C · Cargo', dot: '#b45309',
+    note: '“Cargo” — warm cream surfaces, heavy black type, amber accent, chunky radii. The trade/warehouse direction: approachable, human, a little blue-collar on purpose. Right if the brand should feel like the closeout floor, not a fintech dashboard.',
+    palette: [['bg','#faf5ec'],['panel','#fffdf8'],['text','#2b2417'],['accent','#b45309'],['ok','#3f6212'],['warn','#b45309'],['danger','#b91c1c']],
+  },
+  indigo: {
+    label: 'D · Indigo', dot: '#4f46e5',
+    note: '“Indigo” — cool gray-white, indigo accent, modern SaaS default. The safest, most familiar B2B look (Stripe/Notion adjacent) — nobody bounces off it, nothing about it is memorable either. A strong base if you want the product to do the talking.',
+    palette: [['bg','#f5f6fa'],['panel','#ffffff'],['text','#191d2e'],['accent','#4f46e5'],['ok','#15803d'],['warn','#b45309'],['danger','#be123c']],
+  },
+};
+
+function setDir(d) {
+  document.body.dataset.dir = d;
+  document.getElementById('dirnote').textContent = DIRS[d].note;
+  document.getElementById('palette').innerHTML = DIRS[d].palette.map(([k, hex]) =>
+    `<div class="swatch"><div class="chipc" style="background:${hex}"></div>${k} · ${hex}</div>`).join('');
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.d === d));
+  try { localStorage.setItem('tm.designdir', d); } catch (e) {}
+}
+document.getElementById('tabrow').innerHTML = Object.entries(DIRS).map(([k, v]) =>
+  `<button class="tab" data-d="${k}" onclick="setDir('${k}')"><span class="dot" style="background:${v.dot}"></span>${v.label}</button>`).join('');
+let start = 'ledger';
+try { start = localStorage.getItem('tm.designdir') || 'ledger'; } catch (e) {}
+setDir(DIRS[start] ? start : 'ledger');
+</script>
+</body>
+</html>
