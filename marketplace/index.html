@@ -470,10 +470,55 @@ function visibleListings(buyerId) {
   const ch = myChannels(buyerId);
   return state.listings.filter(l => l.active && ch.includes(l.ownerId) && l.ownerId !== buyerId);
 }
-// teaser listings: visible-as-locked to this buyer
+// teaser listings: visible-as-locked to this buyer.
+// DISCOVERY SHIELD: a broker's suppliers are invisible to that broker's buyers
+// unless the broker lifts the shield (rel.share). Most protective setting wins.
 function teaserListings(buyerId) {
   const ch = myChannels(buyerId);
-  return state.listings.filter(l => l.active && l.teaser && !ch.includes(l.ownerId) && l.ownerId !== buyerId);
+  const myBrokers = ch.filter(cid => (acc(cid).roles || []).includes('broker'));
+  return state.listings.filter(l => {
+    if (!(l.active && l.teaser && !ch.includes(l.ownerId) && l.ownerId !== buyerId)) return false;
+    if (!l.sourceId) {
+      const shielded = myBrokers.some(b => {
+        const e = approved(l.ownerId, b, 'broker');
+        return e && !e.share;
+      });
+      if (shielded) return false;
+    }
+    return true;
+  });
+}
+
+// BAND PARTITION: when a buyer has BOTH a direct seller channel and a broker
+// channel for the same product, the broker serves only below one seller-unit
+// (e.g. cases up to just under a pallet); the seller's band is the seller's.
+// Returns the max qty a buyer may order on a derived listing, or null = no cap.
+function bandCapFor(l, buyerId) {
+  if (!l.sourceId) return null;
+  const s = sourceOf(l); if (!s) return null;
+  const r = approved(s.ownerId, buyerId, 'buyer');
+  if (!r) return null;
+  if ((r.excluded || []).includes(l.productId)) return null; // buyer dropped direct for this item
+  return Math.ceil(s.unitContains / l.unitContains) - 1;
+}
+// Relationship precedence beats price: an offer that can't serve below the
+// seller's band is suppressed entirely, even if cheaper.
+function offerSuppressed(l, buyerId) {
+  const cap = bandCapFor(l, buyerId);
+  return cap !== null && (cap < 1 || l.moq > cap);
+}
+function directEdgeFor(buyerId, productId) {
+  const p = product(productId); if (!p) return null;
+  return approved(p.ownerId, buyerId, 'buyer');
+}
+
+// VOLUME FEE TIERS: broker/seller platform fee on retail hops steps down with
+// delivered retail volume — productive intermediaries keep more margin.
+function feeRateFor(accountId) {
+  const vol = state.orders
+    .filter(o => o.ownerId === accountId && o.status === 'delivered' && !o.downstreamId)
+    .reduce((s, o) => s + o.total, 0);
+  return vol >= 50000 ? 0.02 : vol >= 10000 ? 0.025 : 0.03;
 }
 // derived-listing economics
 function sourceOf(l) { return l.sourceId ? listing(l.sourceId) : null; }
@@ -592,11 +637,16 @@ function offerRow(l, opts = {}) {
   const p = product(l.productId);
   const nego = acceptedNego(me().id, l.id);
   const effPrice = nego ? nego.price : l.price;
-  const avail = availableUnits(l);
+  const cap = bandCapFor(l, me().id);
+  const avail = cap !== null ? Math.min(availableUnits(l), cap) : availableUnits(l);
+  const s = l.sourceId ? sourceOf(l) : null;
+  const bandChip = cap !== null && s
+    ? `<span class="chip violet" title="Your direct supplier channel covers ${s.moq}+ ${esc(s.unit)}s">band: under 1 ${esc(s.unit)}</span>`
+    : (opts.directBand && !l.sourceId ? `<span class="chip accent">direct · ${l.moq} ${esc(l.unit)}+</span>` : '');
   return `<div class="offer">
     <div class="grow">${who(l.ownerId)}</div>
     <div class="stack" style="min-width:130px">
-      <span class="meta"><b>${esc(l.unit)}</b> of ${l.unitContains} ${esc(p.baseUnit)}s</span>
+      <span class="meta"><b>${esc(l.unit)}</b> of ${l.unitContains} ${esc(p.baseUnit)}s ${bandChip}</span>
       <span class="meta">MOQ ${l.moq} · ${avail} available</span>
     </div>
     <div class="stack" style="min-width:120px">
@@ -608,6 +658,7 @@ function offerRow(l, opts = {}) {
       <button class="btn primary small" onclick="openOrderModal('${l.id}')">Order</button>
       ${l.negotiable && !nego ? `<button class="btn small" onclick="openNegoModal('${l.id}')">Negotiate</button>` : ''}
       <button class="btn small" onclick="openThreadWith('${l.ownerId}','${esc(p.name)}')">Message</button>
+      ${opts.canDropDirect ? `<button class="btn small" title="Remove this item from your direct channel so broker offers open up for all quantities" onclick="excludeItem('${l.productId}')">Use brokers instead</button>` : ''}
     </div>
   </div>`;
 }
@@ -615,7 +666,7 @@ function offerRow(l, opts = {}) {
 function vMarket() {
   const m = me();
   const vis = visibleListings(m.id);
-  const sponsored = vis.filter(l => l.sponsored);
+  const sponsored = vis.filter(l => l.sponsored && !offerSuppressed(l, m.id));
   // group by product
   const byProd = {};
   vis.forEach(l => { (byProd[l.productId] = byProd[l.productId] || []).push(l); });
@@ -640,7 +691,14 @@ function vMarket() {
   if (!prods.length) html += `<div class="empty">No listings yet — you need a seller or broker to approve you or send an invite code (My Network → Redeem invite).</div>`;
   prods.forEach(pid => {
     const p = product(pid);
-    const offers = byProd[pid].sort((a, b) => pricePerBase(a) - pricePerBase(b));
+    const dr = directEdgeFor(m.id, pid);
+    const excluded = dr && (dr.excluded || []).includes(pid);
+    let offers = byProd[pid];
+    if (excluded) offers = offers.filter(l => !(l.ownerId === p.ownerId && !l.sourceId));
+    offers = offers.filter(l => !offerSuppressed(l, m.id));
+    const hasBrokerAlt = offers.some(l => l.sourceId && sourceOf(l) && sourceOf(l).ownerId === p.ownerId);
+    offers = offers.sort((a, b) => pricePerBase(a) - pricePerBase(b));
+    const readdPending = dr && (dr.readd || []).includes(pid);
     html += `<div class="prodgroup">
       <div class="prodhead">
         <span class="prodimg lg">${p.img.startsWith('data:') ? `<img src="${p.img}">` : p.img}</span>
@@ -650,7 +708,13 @@ function vMarket() {
           <span class="meta">${esc(p.desc || '')}</span>
         </div>
       </div>
-      ${offers.map(l => offerRow(l)).join('')}
+      ${offers.map(l => offerRow(l, {
+        directBand: dr && !excluded && hasBrokerAlt,
+        canDropDirect: dr && !excluded && hasBrokerAlt && l.ownerId === p.ownerId && !l.sourceId,
+      })).join('')}
+      ${excluded ? `<div class="offer"><span class="meta">You removed this item from your direct supplier channel — broker offers are open for all quantities. Restoring direct is at the seller's discretion.</span>
+        ${readdPending ? '<span class="chip warn">re-add requested — pending seller approval</span>'
+                       : `<button class="btn small" onclick="requestReadd('${pid}')">Request re-add</button>`}</div>` : ''}
     </div>`;
   });
 
@@ -689,6 +753,44 @@ function requestAccess(channelId) {
   state.rels.push({ id: uid('r'), grantorId: channelId, granteeId: me().id, kind: 'buyer', status: 'pending', requestedBy: me().id,
     terms: { comm: 'relay', reveal: false, priceFloor: null, minVolume: '' } });
   toast('Access requested — the channel owner will review your trade profile');
+  render();
+}
+
+/* ---- channel precedence actions ---- */
+function excludeItem(productId) {
+  const r = directEdgeFor(me().id, productId); if (!r) return;
+  if (!confirm('Remove this item from your direct supplier channel? Broker offers open up for all quantities — but getting the direct channel back for this item is at the seller’s discretion.')) return;
+  r.excluded = r.excluded || [];
+  if (!r.excluded.includes(productId)) r.excluded.push(productId);
+  toast('Item moved to broker channels — direct restore requires seller approval');
+  render();
+}
+function requestReadd(productId) {
+  const r = directEdgeFor(me().id, productId); if (!r) return;
+  r.readd = r.readd || [];
+  if (!r.readd.includes(productId)) r.readd.push(productId);
+  toast('Re-add requested — at the seller’s discretion');
+  render();
+}
+function approveReadd(relId, productId) {
+  const r = state.rels.find(x => x.id === relId); if (!r) return;
+  r.excluded = (r.excluded || []).filter(p => p !== productId);
+  r.readd = (r.readd || []).filter(p => p !== productId);
+  toast('Direct channel restored for this item');
+  render();
+}
+function declineReadd(relId, productId) {
+  const r = state.rels.find(x => x.id === relId); if (!r) return;
+  r.readd = (r.readd || []).filter(p => p !== productId);
+  toast('Request declined — item stays broker-only for this buyer');
+  render();
+}
+// broker lifts/drops the discovery shield for one of their suppliers
+function toggleShare(relId) {
+  const r = state.rels.find(x => x.id === relId); if (!r) return;
+  r.share = !r.share;
+  toast(r.share ? 'Discovery allowed — your buyers can now see this supplier exists'
+                : 'Shielded — this supplier is invisible to your buyers');
   render();
 }
 
@@ -1079,13 +1181,15 @@ function confirmDelivery(orderId) {
   if (!o.downstreamId) setTimeout(() => openRateModal(o.id, 'counterparty'), 350);
 }
 
-// escrow release: platform fee on retail (non-PO) hops; full release on PO hops
+// escrow release: platform fee on retail (non-PO) hops at the owner's volume
+// tier; full release on PO hops (wholesale hops are free at launch)
 function releaseEscrow(o) {
   const isPO = !!o.downstreamId;
-  const fee = isPO ? 0 : +(o.total * PLATFORM_FEE).toFixed(2);
+  const rate = feeRateFor(o.ownerId);
+  const fee = isPO ? 0 : +(o.total * rate).toFixed(2);
   const net = +(o.total - fee).toFixed(2);
   state.ledger.push({ id: uid('lg'), orderId: o.id, accountId: o.ownerId, type: 'payout', amount: net,
-    note: `Escrow release · order ${o.id}` + (fee ? ` (net of 3% platform fee ${money(fee)})` : ' (wholesale hop — no fee)'), at: now() });
+    note: `Escrow release · order ${o.id}` + (fee ? ` (net of ${(rate * 100).toFixed(1)}% platform fee ${money(fee)})` : ' (wholesale hop — no fee)'), at: now() });
 }
 
 /* ============ VIEW: MESSAGES ============ */
@@ -1270,10 +1374,19 @@ function relRow(r, iAmGrantor) {
         ${iAmGrantor && r.status === 'approved' ? `
           <button class="btn small" onclick="openTermsModal('${r.id}')">Terms</button>
           <button class="btn small danger" onclick="revokeRel('${r.id}')">Revoke</button>` : ''}
+        ${!iAmGrantor && r.kind === 'broker' && r.status === 'approved' && me().roles.includes('broker') ? `
+          <button class="btn small" title="Whether your buyers can discover this supplier exists" onclick="toggleShare('${r.id}')">${r.share ? '👁 discoverable by my buyers' : '🛡 shielded from my buyers'}</button>` : ''}
       </span>
     </div>
     <div class="row" style="margin-top:8px">${termChips} <span class="meta">· ${r.kind === 'broker' ? 'broker relationship' : 'buyer relationship'}${iAmGrantor ? ' · you set the terms' : ' · their terms apply to you'}</span></div>
     ${buyerProfile}
+    ${iAmGrantor && r.kind === 'buyer' && ((r.excluded || []).length || (r.readd || []).length) ? `
+      <div class="row" style="margin-top:8px">
+        ${(r.excluded || []).filter(pid => !(r.readd || []).includes(pid)).map(pid => `<span class="chip">direct disabled: ${esc((product(pid) || {}).name || pid)}</span>`).join('')}
+        ${(r.readd || []).map(pid => `<span class="row"><span class="chip warn">re-add request: ${esc((product(pid) || {}).name || pid)}</span>
+          <button class="btn small primary" onclick="approveReadd('${r.id}','${pid}')">Approve</button>
+          <button class="btn small danger" onclick="declineReadd('${r.id}','${pid}')">Decline</button></span>`).join('')}
+      </div>` : ''}
   </div>`;
 }
 
@@ -1365,8 +1478,12 @@ function vWallet() {
   const escrowHeld = state.orders
     .filter(o => o.buyerId === m && ['placed', 'routed', 'confirmed', 'shipped'].includes(o.status))
     .reduce((s, o) => s + o.total, 0);
+  const myRate = feeRateFor(m);
+  const tierNote = (me().roles.includes('seller') || me().roles.includes('broker'))
+    ? `<div class="card" style="margin-bottom:12px"><span class="meta">Your platform fee tier: <b>${(myRate * 100).toFixed(1)}%</b> on retail sales — steps down with delivered volume (3% base → 2.5% at $10k → 2% at $50k). Wholesale (broker→supplier) hops are fee-free: the platform rewards keeping brokers in the deal.</span></div>` : '';
   return `<h1 class="viewtitle">Wallet</h1>
-  <p class="viewsub">Buyers pay the platform into escrow; payouts split automatically on delivery — supplier cost, broker margin, platform fee (3% on the retail hop). Invoices are generated per hop with the right identities masked on each document.</p>
+  <p class="viewsub">Buyers pay the platform into escrow; payouts split automatically on delivery — supplier cost, broker margin, platform fee at your volume tier. Invoices are generated per hop with the right identities masked on each document.</p>
+  ${tierNote}
   <div class="row" style="margin-bottom:16px">
     <div class="card" style="flex:1;margin:0"><div class="meta">Net flow (this demo)</div><div class="price" style="font-size:22px">${money(bal)}</div></div>
     <div class="card" style="flex:1;margin:0"><div class="meta">In escrow (your open purchases)</div><div class="price" style="font-size:22px">${money(escrowHeld)}</div></div>
@@ -1390,10 +1507,13 @@ function openOrderModal(listingId) {
   const l = listing(listingId); const p = product(l.productId);
   const nego = acceptedNego(me().id, l.id);
   const price = nego ? nego.price : l.price;
-  const avail = availableUnits(l);
+  const cap = bandCapFor(l, me().id);
+  const avail = cap !== null ? Math.min(availableUnits(l), cap) : availableUnits(l);
+  const s = l.sourceId ? sourceOf(l) : null;
   openModal(`<h3>Order — ${esc(p.name)}</h3>
   <p class="msub">Sold by ${esc(acc(l.ownerId).alias)} · ${esc(l.unit)} of ${l.unitContains} ${esc(p.baseUnit)}s ·
   ${money(price)}/${esc(l.unit)} ${nego ? '(your negotiated price)' : ''} · MOQ ${l.moq} · ${avail} available.
+  ${cap !== null && s ? `This channel serves quantities under 1 ${esc(s.unit)} — for ${s.moq}+ ${esc(s.unit)}s, order on your direct supplier channel.` : ''}
   Payment goes into platform escrow and is released to your counterparty when you confirm delivery.</p>
   <div class="fld"><label>Quantity (${esc(l.unit)}s)</label>
     <input type="number" id="ordqty" value="${l.moq}" min="${l.moq}" max="${avail}" oninput="updOrdTotal('${l.id}')"></div>
@@ -1414,6 +1534,12 @@ function submitOrder(listingId) {
   const l = listing(listingId);
   const q = parseInt(document.getElementById('ordqty').value) || 0;
   if (q < l.moq) { toast('Below this channel’s minimum (' + l.moq + ')'); return; }
+  const cap = bandCapFor(l, me().id);
+  if (cap !== null && q > cap) {
+    const s = sourceOf(l);
+    toast('Above this channel’s band — ' + s.moq + '+ ' + s.unit + 's are served by your direct supplier channel');
+    return;
+  }
   if (q > availableUnits(l)) { toast('Only ' + availableUnits(l) + ' available'); return; }
   placeOrder(listingId, q);
 }
@@ -1629,7 +1755,8 @@ function openInvoiceModal(orderId) {
   const o = order(orderId); const l = listing(o.listingId); const p = product(l.productId);
   const m = me().id;
   const iAmOwner = o.ownerId === m;
-  const fee = o.downstreamId ? 0 : +(o.total * PLATFORM_FEE).toFixed(2);
+  const feeRate = feeRateFor(o.ownerId);
+  const fee = o.downstreamId ? 0 : +(o.total * feeRate).toFixed(2);
   const isDerived = !!l.sourceId;
   let marginBlock = '';
   if (iAmOwner && isDerived) {
@@ -1642,7 +1769,7 @@ function openInvoiceModal(orderId) {
   <div class="ledgerrow"><span>Seller of record</span><span>${esc(acc(o.ownerId).alias)}</span></div>
   <div class="ledgerrow"><span>Buyer</span><span>${esc(acc(o.buyerId).alias)}</span></div>
   <div class="ledgerrow"><span>${esc(p.name)} — ${o.qty} × ${esc(l.unit)} @ ${money(o.unitPrice)}</span><span>${money(o.total)}</span></div>
-  ${iAmOwner ? `<div class="ledgerrow"><span>Platform fee ${o.downstreamId ? '(wholesale hop — none)' : '(3%)'}</span><span>−${money(fee)}</span></div>
+  ${iAmOwner ? `<div class="ledgerrow"><span>Platform fee ${o.downstreamId ? '(wholesale hop — none)' : `(${(feeRate * 100).toFixed(1)}% — your volume tier)`}</span><span>−${money(fee)}</span></div>
   <div class="ledgerrow"><span><b>Net payout on delivery</b></span><span class="amt pos">${money(o.total - fee)}</b></span></div>` :
   `<div class="ledgerrow"><span><b>Total (escrow)</b></span><span class="amt neg">${money(o.total)}</span></div>`}
   ${marginBlock}
@@ -1683,10 +1810,10 @@ function openIntro() {
   <p class="msub">A gated wholesale marketplace. Nothing is public: sellers approve brokers, sellers & brokers approve buyers, and identities stay masked behind storefront aliases until the relationship owner reveals them. Brokers re-list suppliers' goods under their own storefront — their unit, their price — and to buyers they look exactly like sellers.</p>
   <p class="msub"><b>Use the “Acting as” switcher</b> (top right) to play every side. A good tour:</p>
   <ol style="font-size:13px;line-height:1.7;color:var(--text-2);padding-left:18px">
-    <li><b>Sam's Corner Market</b> (buyer): Marketplace shows olive oil with <b>3 offers</b> — two brokers selling cases, one locked pallet teaser from the seller. Order 10 cases from Nexus. Try messaging with a phone number in it.</li>
-    <li><b>Nexus Trading</b> (broker): see the order auto-route into an upstream PO; check Source Catalog, re-list something with your own markup; relay a buyer question to the supplier.</li>
-    <li><b>Atlas Foods</b> (seller): confirm & ship the upstream PO (blind drop-ship, broker's branding); approve the pending broker request; edit relationship terms — flip comms to direct, set a price floor, reveal identity.</li>
-    <li>Back to <b>Sam</b>: confirm delivery → watch escrow split in everyone's Wallet → rate the storefront.</li>
+    <li><b>Sam's Corner Market</b> (buyer): Marketplace shows olive oil with <b>2 case offers from 2 masked brokers</b>. Notice what you <i>can't</i> see: the supplier behind them — brokers' suppliers are shielded from their buyers by default. Order 10 cases from Nexus. Try messaging with a phone number in it.</li>
+    <li><b>Nexus Trading</b> (broker): see the order auto-route into an upstream PO; in My Network, note the 🛡 shield toggle on your supplier; re-list something from the Source Catalog with your own markup.</li>
+    <li><b>Atlas Foods</b> (seller): confirm & ship the upstream PO (blind drop-ship, broker's branding); invite a buyer directly — once they accept, brokers only serve <b>under 1 pallet</b> for your items (band partition) while you keep pallet-and-up.</li>
+    <li>Back to <b>Sam</b>: confirm delivery → watch escrow split in everyone's Wallet → rate the storefront. Prefer brokers for an item you also buy direct? “Use brokers instead” drops the direct channel — but getting it back is the seller's call.</li>
   </ol>
   <p class="msub">Everything is local to your browser (localStorage). ↺ Reset restores this demo scenario. The full platform design lives in <b>BLUEPRINT.md</b> next to this file.</p>
   <div class="row" style="justify-content:flex-end"><button class="btn primary" onclick="closeModal();state.session.seenIntro=true;save()">Got it</button></div>`);
