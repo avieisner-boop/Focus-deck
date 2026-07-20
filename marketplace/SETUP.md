@@ -107,7 +107,15 @@ Both can work. The trade-off:
 and banking relationship genuinely speed Connect approval — but describe the marketplace activity
 accurately in the Connect application (don't let it ride under STY's existing MCC if that's
 unrelated). ⚠️ Ask your accountant whether STY's current classification is compatible; if STY is in
-an unrelated/high-risk category, form the fresh entity instead. **Migrate to a dedicated entity
+an unrelated/high-risk category, form the fresh entity instead.
+
+**DECIDED: STY Enterprises (S-corp) is the starting entity.** S-corp works fine for Stripe
+Connect and marketplace operation. Two S-corp-specific notes for the accountant/attorney ⚠️:
+(1) S-corps have shareholder restrictions (≤100, individuals/US persons) — irrelevant for
+operating, relevant only if outside investors ever come in, which is one more reason the
+marketplace migrates to its own entity (likely LLC or C-corp) before raising or real scale;
+(2) keep the marketplace's books separable inside STY from day one (its own bank account and
+class/ledger) so the eventual spin-out is clean. **Migrate to a dedicated entity
 before real GMV** — a business holding other people's escrowed money should not share a balance
 sheet with anything else. This mirrors the blueprint's DBA-now / entity-before-scale guidance.
 
