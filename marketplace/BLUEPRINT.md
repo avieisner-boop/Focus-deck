@@ -206,6 +206,30 @@ you:
   deciding whom to approve.
 - House rails: platform email digests ("3 new listings in your network"), re-engagement.
 
+### Blind ad routing (promotion without exposure)
+
+The ad system inherits the identity guarantees — an advertiser can promote hard without ever
+leaking who they are:
+
+- **Platform-served creative only.** The platform hosts every ad asset and renders every
+  creative under the storefront alias. No advertiser URLs, pixels, UTM tags, or third-party
+  trackers — the same contact-stripping filter that guards messages guards ad copy.
+- **Click routing dies at the platform's door.** Every click resolves through a platform
+  redirect to an on-platform destination (listing, teaser, or gated invite page). There is
+  nothing in the ad, the link, or the analytics that identifies the business behind the alias.
+- **Identity-free attribution.** Advertisers see impressions/clicks/orders per alias-served
+  campaign; viewers are counted, never identified to the advertiser. Neither side of an ad can
+  deanonymize the other.
+- **Teaser boosts respect the graph.** Promoting to buyers outside your channel shows category,
+  unit, alias + rating, and a Request Access button — nothing more — and **discovery shields
+  still apply** (§13): a boost never surfaces a supplier to a broker's shielded buyers.
+- **Off-platform acquisition (Google/Meta) lands on gated pages.** External ads never link to a
+  storefront; they land on invite/request-access pages that show only category + alias. The
+  platform is the advertiser of record externally, so no seller's name ever appears in an ad
+  network's transparency library.
+- Ad billing is separate from trade settlement (card-on-file subscription), so ad spend never
+  touches escrow.
+
 ## 11. Trust, safety & platform protection
 
 - **KYB/KYC verification** at signup (business registration, bank account) → "Verified" badge.
