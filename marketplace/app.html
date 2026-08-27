@@ -7,29 +7,32 @@
 <title>QuietLot — Broker Network Marketplace (Prototype)</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23047857'/%3E%3Cpath d='M14 40l12-16 8 10 6-7 10 13' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
 <style>
-  /* ============ DESIGN TOKENS — "Ledger" direction ============
-     Paper-white surfaces, ink-navy text, deep emerald accent, serif
-     headlines. Dark variant keeps the same brand character. */
+  /* ============ DESIGN TOKENS — "Hub" direction ============
+     HUBX × Walmart hybrid: trust-blue commerce surfaces, spark-yellow
+     highlights, friendly rounded shapes; dark mode goes full trading-
+     floor navy. */
   :root {
-    --bg: #f6f5f1; --bg-soft: #efede6; --panel: #ffffff; --panel-2: #f6f4ee;
-    --line: #e4e1d6; --line-soft: #eceade;
-    --text: #1c2433; --text-2: #465062; --muted: #7d8494;
-    --accent: #047857; --accent-2: #0f766e;
-    --accent-soft: rgba(4,120,87,.08); --accent-ring: rgba(4,120,87,.25);
-    --ok: #047857; --warn: #b45309; --danger: #b91c1c; --gold: #a16207; --violet: #6d28d9;
-    --r-sm: 5px; --r-md: 8px; --r-lg: 11px; --r-xl: 16px;
-    --shadow-sm: 0 1px 2px rgba(28,36,51,.06);
-    --shadow-md: 0 2px 6px rgba(28,36,51,.06), 0 1px 2px rgba(28,36,51,.04);
-    --shadow-lg: 0 10px 30px rgba(28,36,51,.10), 0 2px 8px rgba(28,36,51,.05);
+    --bg: #eef4fb; --bg-soft: #e3edf8; --panel: #ffffff; --panel-2: #f3f7fc;
+    --line: #dbe4f0; --line-soft: #e7eef7;
+    --text: #0e1a2b; --text-2: #3d4d63; --muted: #74819a;
+    --accent: #0071dc; --accent-2: #0654ba;
+    --accent-soft: rgba(0,113,220,.09); --accent-ring: rgba(0,113,220,.28);
+    --spark: #ffc220;
+    --ok: #0e8a4a; --warn: #a35200; --danger: #c2231e; --gold: #91650a; --violet: #6d28d9;
+    --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px;
+    --shadow-sm: 0 1px 2px rgba(14,26,43,.06);
+    --shadow-md: 0 2px 6px rgba(14,26,43,.07), 0 1px 2px rgba(14,26,43,.04);
+    --shadow-lg: 0 10px 30px rgba(14,26,43,.12), 0 2px 8px rgba(14,26,43,.05);
     --ease: cubic-bezier(.22,.61,.36,1);
   }
   [data-theme="dark"] {
-    --bg: #10141f; --bg-soft: #171c2a; --panel: #1a2130; --panel-2: #202839;
-    --line: #2a3347; --line-soft: #232b3d;
-    --text: #e9ecf4; --text-2: #c3cad9; --muted: #8791a5;
-    --accent: #10b981; --accent-2: #34d399;
-    --accent-soft: rgba(16,185,129,.12); --accent-ring: rgba(16,185,129,.30);
-    --ok: #34d399; --warn: #fbbf24; --danger: #ef4444; --gold: #fbbf24; --violet: #a78bfa;
+    --bg: #0a1220; --bg-soft: #101a2c; --panel: #142033; --panel-2: #1a2740;
+    --line: #24344e; --line-soft: #1e2c42;
+    --text: #eaf1fa; --text-2: #c2cfe0; --muted: #8496b0;
+    --accent: #4da3ff; --accent-2: #74b8ff;
+    --accent-soft: rgba(77,163,255,.13); --accent-ring: rgba(77,163,255,.32);
+    --spark: #ffc220;
+    --ok: #34d399; --warn: #fbbf24; --danger: #ef4444; --gold: #ffc220; --violet: #a78bfa;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.18);
     --shadow-md: 0 2px 6px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.10);
     --shadow-lg: 0 12px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.10);
@@ -40,8 +43,8 @@
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "SF Pro Text", "Segoe UI", system-ui, sans-serif;
     background:
-      radial-gradient(1000px 500px at 85% -15%, rgba(4,120,87,.05), transparent 60%),
-      radial-gradient(800px 420px at -10% 115%, rgba(15,118,110,.04), transparent 60%),
+      radial-gradient(1000px 500px at 85% -15%, rgba(0,113,220,.06), transparent 60%),
+      radial-gradient(800px 420px at -10% 115%, rgba(255,194,32,.05), transparent 60%),
       var(--bg);
     color: var(--text);
     -webkit-font-smoothing: antialiased;
@@ -66,7 +69,7 @@
   }
   .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
   .btn:active { transform: translateY(1px); }
-  .btn.primary { background: linear-gradient(180deg, #059669 0%, #047857 100%); color: #fff; border-color: transparent; }
+  .btn.primary { background: linear-gradient(180deg, #0f83f2 0%, #0071dc 100%); color: #fff; border-color: transparent; }
   .btn.primary:hover { filter: brightness(1.08); }
   .btn.danger { color: var(--danger); }
   .btn.danger:hover { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.45); }
@@ -80,16 +83,15 @@
     background: color-mix(in srgb, var(--panel) 82%, transparent);
     backdrop-filter: blur(10px); position: sticky; top: 0; z-index: 40;
   }
-  .brand { display: flex; align-items: center; gap: 9px; font-weight: 700; font-size: 16px; }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 16px; }
   .brand .logo {
-    width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center;
-    background: linear-gradient(135deg, #059669, #047857); color: #fff; font-size: 15px;
+    width: 28px; height: 28px; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(135deg, #0f83f2, #0654ba); color: var(--spark); font-size: 15px;
   }
-  /* Ledger serif voice: headlines, brand, money */
-  .brand, h1.viewtitle, h2.sec, #modal h3, .price {
-    font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0;
-  }
-  .brand .proto { font-size: 10px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); padding: 2px 6px; border-radius: 99px; letter-spacing: .04em; }
+  /* Hub voice: heavy friendly sans for headlines, brand, money */
+  .brand, h1.viewtitle, h2.sec, #modal h3 { font-weight: 800; letter-spacing: -.02em; }
+  .price { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .brand .proto { font-size: 10px; font-weight: 700; color: #0e1a2b; background: var(--spark); padding: 2px 7px; border-radius: 99px; letter-spacing: .04em; }
   #actingas {
     display: flex; align-items: center; gap: 8px; margin-left: auto;
     background: var(--panel-2); border: 1px solid var(--line); border-radius: var(--r-md);
@@ -112,7 +114,7 @@
     color: var(--text-2); text-align: left;
   }
   .navitem:hover { background: var(--panel-2); color: var(--text); }
-  .navitem.active { background: var(--accent-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent-ring); }
+  .navitem.active { background: var(--accent-soft); color: var(--text); box-shadow: inset 0 0 0 1px var(--accent-ring), inset 3px 0 0 var(--spark); }
   .navitem .badge {
     margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 99px;
     background: var(--danger); color: #fff; font-size: 10.5px; font-weight: 700;
@@ -579,6 +581,7 @@ function navItems() {
   if (isB) items.push({ id: 'market', icon: '🏪', label: 'Marketplace' });
   if (isBr) items.push({ id: 'sources', icon: '🧭', label: 'Source Catalog', badge: badgeSources() });
   if (isS) items.push({ id: 'products', icon: '📦', label: 'My Products' });
+  if (isBr) items.push({ id: 'brokerhq', icon: '🧰', label: 'Broker HQ' });
   if (isS || isBr) items.push({ id: 'listings', icon: '🏷️', label: 'My Listings' });
   if (isS || isBr) items.push({ id: 'adsmgr', icon: '📣', label: 'Ads Manager' });
   items.push({ id: 'deals', icon: '🤝', label: 'Deals & Offers', badge: badgeDeals() });
@@ -623,7 +626,7 @@ function render() {
     items.map(i => `<button class="navitem ${state.session.view === i.id ? 'active' : ''}" onclick="setView('${i.id}')">
       <span>${i.icon}</span> ${i.label} ${i.badge ? `<span class="badge">${i.badge}</span>` : ''}</button>`).join('');
   // main view
-  const views = { market: vMarket, sources: vSources, products: vProducts, listings: vListings, adsmgr: vAds, deals: vDeals, orders: vOrders, messages: vMessages, network: vNetwork, wallet: vWallet };
+  const views = { market: vMarket, brokerhq: vBrokerHQ, sources: vSources, products: vProducts, listings: vListings, adsmgr: vAds, deals: vDeals, orders: vOrders, messages: vMessages, network: vNetwork, wallet: vWallet };
   document.getElementById('main').innerHTML = (views[state.session.view] || vMarket)();
   save();
 }
@@ -1017,6 +1020,103 @@ function vAds() {
   }).join('');
   html += `<p class="viewsub" style="margin-top:14px">Off-platform acquisition ads (Google/Meta) work the same way when we build them: they land on a gated invite page that shows category + alias only — never a storefront, never an identity. The click trail dies at the platform's door.</p>`;
   return html;
+}
+
+/* ============ VIEW: BROKER HQ (broker command center) ============ */
+function calcHQ() {
+  if (!document.getElementById('hqbuy')) return;
+  const buy  = parseFloat(document.getElementById('hqbuy').value)  || 0;
+  const sell = parseFloat(document.getElementById('hqsell').value) || 0;
+  const qty  = parseFloat(document.getElementById('hqqty').value)  || 0;
+  const fee  = feeRateFor(me().id);
+  const rev = sell * qty, cost = buy * qty, feeAmt = rev * fee;
+  const net = rev - cost - feeAmt;
+  const roi = cost > 0 ? (net / cost * 100).toFixed(1) + '%' : '—';
+  document.getElementById('hqout').innerHTML =
+    `<div class="row between"><span class="meta">Revenue</span><b>${money(rev)}</b></div>
+     <div class="row between"><span class="meta">Cost of goods</span><b>${money(cost)}</b></div>
+     <div class="row between"><span class="meta">Platform fee (${(fee * 100).toFixed(1)}% — drops with volume)</span><b>${money(feeAmt)}</b></div>
+     <div class="row between" style="border-top:1px solid var(--line);padding-top:6px;margin-top:4px">
+       <span><b>Net margin</b></span><span class="price" style="color:${net >= 0 ? 'var(--ok)' : 'var(--danger)'}">${money(net)}</span></div>
+     <div class="row between"><span class="meta">Return on cash</span><b>${roi}</b></div>`;
+}
+function vBrokerHQ() {
+  const m = me();
+  const myListings = state.listings.filter(l => l.ownerId === m.id);
+  const sources = state.rels.filter(r => r.kind === 'broker' && r.granteeId === m.id && r.status === 'approved');
+  const buyers  = state.rels.filter(r => r.kind === 'buyer' && r.grantorId === m.id && r.status === 'approved');
+  const leads   = state.rels.filter(r => r.kind === 'buyer' && r.grantorId === m.id && r.status === 'pending');
+  const isMineL = id => { const l = listing(id); return l && l.ownerId === m.id; };
+  const negos   = state.negotiations.filter(n => isMineL(n.listingId) && n.status !== 'accepted' && n.status !== 'declined');
+  const myOrders = state.orders.filter(o => o.ownerId === m.id);
+  const toFulfill = myOrders.filter(o => o.status === 'placed' || o.status === 'confirmed' || o.status === 'routed');
+  const transit   = myOrders.filter(o => o.status === 'shipped');
+  const settled   = myOrders.filter(o => o.status === 'delivered');
+  const marginOf = o => { const l = listing(o.listingId); if (!l || !l.sourceId) return 0;
+    return (o.unitPrice - costBasisPerUnit(l)) * o.qty - o.unitPrice * o.qty * feeRateFor(m.id); };
+  const settledMargin = settled.reduce((s, o) => s + marginOf(o), 0);
+  const pipeValue = [...toFulfill, ...transit].reduce((s, o) => s + o.unitPrice * o.qty, 0);
+  const stage = (label, items, renderIt) => `<div class="card" style="flex:1;min-width:150px">
+    <div class="navlbl" style="padding:0 0 6px">${label} · ${items.length}</div>
+    ${items.length ? items.slice(0, 3).map(renderIt).join('') : '<span class="meta">—</span>'}
+    ${items.length > 3 ? `<div class="meta" style="margin-top:4px">+${items.length - 3} more</div>` : ''}</div>`;
+  const oline = o => { const p = product(listing(o.listingId).productId);
+    return `<div class="meta" style="margin-bottom:4px">${esc(p.name)} · ${o.qty} × ${money(o.unitPrice)}</div>`; };
+  setTimeout(calcHQ, 0);
+  return `<h1 class="viewtitle">Broker HQ</h1>
+  <p class="viewsub">Your command center. The whole platform is built around one idea: <b>the middleman's relationships are an asset</b> — this is where you run them like one.</p>
+  <div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${sources.length}</div><span class="meta">sources</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${buyers.length}</div><span class="meta">buyers</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${myListings.filter(l => l.active).length}</div><span class="meta">live listings</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${money(pipeValue)}</div><span class="meta">in pipeline</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px;color:var(--ok)">${money(settledMargin)}</div><span class="meta">settled margin</span></div>
+  </div>
+  <h2 class="sec">Deal pipeline</h2>
+  <div class="row" style="gap:10px;flex-wrap:wrap;align-items:stretch">
+    ${stage('Leads', leads, r => `<div class="meta" style="margin-bottom:4px">${who(r.granteeId)} wants in</div>`)}
+    ${stage('Negotiating', negos, n => { const p = product(listing(n.listingId).productId);
+      return `<div class="meta" style="margin-bottom:4px">${esc(p.name)} · ${who(n.buyerId)}</div>`; })}
+    ${stage('To fulfill', toFulfill, oline)}
+    ${stage('In transit', transit, oline)}
+    ${stage('Settled', settled, oline)}
+  </div>
+  <div class="row" style="gap:14px;flex-wrap:wrap;align-items:flex-start;margin-top:18px">
+    <div class="card" style="flex:1;min-width:260px">
+      <h2 class="sec" style="margin-top:0">Flip calculator</h2>
+      <div class="stack" style="gap:8px">
+        <label class="meta">Buy price /unit <input id="hqbuy" type="number" value="7.00" step="0.25" oninput="calcHQ()" style="width:100%"></label>
+        <label class="meta">Sell price /unit <input id="hqsell" type="number" value="8.75" step="0.25" oninput="calcHQ()" style="width:100%"></label>
+        <label class="meta">Quantity <input id="hqqty" type="number" value="480" oninput="calcHQ()" style="width:100%"></label>
+        <div id="hqout" class="stack" style="gap:4px;margin-top:6px"></div>
+      </div>
+    </div>
+    <div class="stack" style="flex:1.4;min-width:280px;gap:14px">
+      <div class="card">
+        <h2 class="sec" style="margin-top:0">Source vault 🔒</h2>
+        <p class="viewsub" style="margin-bottom:10px">Your supplier book. Every source is <b>shielded by default</b> — your buyers can never discover them, on the marketplace or through ads.</p>
+        ${sources.length ? sources.map(r => `<div class="row between" style="margin-bottom:6px">
+          <span>${who(r.grantorId)}</span>
+          <span class="chip ${r.share ? '' : 'gold'}">${r.share ? 'shield lifted by you' : '🛡️ shielded'}</span>
+        </div>`).join('') : '<span class="meta">No sources yet — request access in Sources.</span>'}
+      </div>
+      <div class="card">
+        <h2 class="sec" style="margin-top:0">Buyer book</h2>
+        ${buyers.length ? buyers.map(r => `<div class="row between" style="margin-bottom:6px">
+          <span>${who(r.granteeId)}</span>
+          <span class="meta">${(r.terms && r.terms.comm) === 'direct' ? 'direct contact ok' : 'relay only'}</span>
+        </div>`).join('') : '<span class="meta">No approved buyers yet.</span>'}
+      </div>
+      <div class="card" style="border-color:var(--accent-ring);background:linear-gradient(135deg,var(--accent-soft),transparent)">
+        <div class="row between">
+          <h2 class="sec" style="margin-top:0">💸 Access Capital</h2>
+          <span class="chip" style="background:var(--spark);color:#0e1a2b;font-weight:700">COMING SOON</span>
+        </div>
+        <p class="viewsub" style="margin-bottom:10px">Don't let cash kill a deal. Vetted funders finance your confirmed purchase orders for a fixed return — the platform escrows the goods-side, the funder is repaid from settlement, your source and buyer stay masked from the funder too. You keep the relationship <i>and</i> the upside.</p>
+        <button class="btn small primary" onclick="toast('You\\'re on the Access Capital waitlist ✓')">Join the waitlist</button>
+      </div>
+    </div>
+  </div>`;
 }
 
 /* ============ VIEW: DEALS (negotiations) ============ */

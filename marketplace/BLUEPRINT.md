@@ -230,6 +230,31 @@ leaking who they are:
 - Ad billing is separate from trade settlement (card-on-file subscription), so ad spend never
   touches escrow.
 
+## Broker HQ — the middleman's command center
+
+The broker is the primary customer, and gets first-class tooling, not just listing forms
+(prototyped in the demo; full architecture in ARCHITECTURE.md M11):
+
+- **Deal pipeline:** leads → negotiating → to fulfill → in transit → settled, built from the
+  relationship/nego/order data that already exists — brokers see their book as a business.
+- **Source vault:** the supplier book with per-source shield status — visible proof that
+  "my buyers cannot see behind me."
+- **Buyer book:** every buyer's terms, bands, and contact rules in one place.
+- **Flip calculator:** buy/sell/quantity → net margin and return-on-cash at the broker's real
+  fee tier.
+- **Margin analytics:** settled margin, pipeline value, margin by source and by buyer (MVP+).
+- **Access Capital** (coming soon — ARCHITECTURE.md §5): deal-by-deal financing of confirmed,
+  escrow-secured POs by vetted funders at a fixed return, with the funder masked from the
+  chain just like everyone else. Gated on securities counsel.
+
+Validation note: anonymous B2B marketplaces are proven at scale — HUBX ($200M GMV in year one,
+101 countries) runs platform-controlled anonymous trading for electronics distribution. QuietLot
+differs by keeping the *relationship owner* (the broker) in the deal rather than replacing them,
+and by making the graph — who may buy from whom, on what terms — the product. Two HUBX ideas
+adopted into the roadmap: real-time inventory feeds (ARCHITECTURE.md M18) and an optional
+platform-takes-title mode for the largest deals (M6, and the collateral backbone for funded
+deals in M16).
+
 ## 11. Trust, safety & platform protection
 
 - **KYB/KYC verification** at signup (business registration, bank account) → "Verified" badge.
