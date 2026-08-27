@@ -3,60 +3,65 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<meta name="theme-color" content="#f6f5f1" />
-<title>QuietLot — The wholesale marketplace where your source stays yours</title>
-<meta name="description" content="An invite-only B2B marketplace for wholesale and closeout lots. Sellers approve who buys. Brokers sell on relationships without exposing their source. Escrowed payments, masked identities, real accountability." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23047857'/%3E%3Cpath d='M14 40l12-16 8 10 6-7 10 13' stroke='white' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
+<meta name="theme-color" content="#0071dc" />
+<title>QuietLot — The middleman's trust network</title>
+<meta name="description" content="The invite-only wholesale marketplace built around the broker. Sell on your relationships without exposing them: masked identities, shielded sources, escrowed payments, and deal capital coming soon." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230071dc'/%3E%3Cpath d='M14 40l12-16 8 10 6-7 10 13' stroke='%23ffc220' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" />
 <style>
-  /* Ledger design language — matches app.html */
+  /* Hub design language — HUBX × Walmart hybrid, matches app.html */
   :root {
-    --bg: #f6f5f1; --panel: #ffffff; --panel-2: #f6f4ee; --line: #e4e1d6;
-    --text: #1c2433; --text-2: #465062; --muted: #7d8494;
-    --accent: #047857; --accent-soft: rgba(4,120,87,.08); --accent-ring: rgba(4,120,87,.25);
-    --warn: #b45309; --gold: #a16207;
-    --r: 11px;
-    --shadow: 0 2px 6px rgba(28,36,51,.06), 0 1px 2px rgba(28,36,51,.04);
+    --bg: #eef4fb; --panel: #ffffff; --panel-2: #f3f7fc; --line: #dbe4f0;
+    --text: #0e1a2b; --text-2: #3d4d63; --muted: #74819a;
+    --accent: #0071dc; --accent-2: #0654ba;
+    --accent-soft: rgba(0,113,220,.09); --accent-ring: rgba(0,113,220,.28);
+    --spark: #ffc220; --ok: #0e8a4a; --warn: #a35200;
+    --r: 14px;
+    --shadow: 0 2px 6px rgba(14,26,43,.07), 0 1px 2px rgba(14,26,43,.04);
   }
   * { box-sizing: border-box; }
   body {
     margin: 0; background: var(--bg); color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", system-ui, sans-serif;
-    -webkit-font-smoothing: antialiased; letter-spacing: -0.004em; line-height: 1.55;
+    -webkit-font-smoothing: antialiased; letter-spacing: -0.006em; line-height: 1.55;
   }
-  h1, h2, h3, .serif { font-family: Georgia, 'Times New Roman', serif; letter-spacing: 0; }
+  h1, h2, h3 { letter-spacing: -.025em; }
   a { color: var(--accent); }
   .wrap { max-width: 1040px; margin: 0 auto; padding: 0 22px; }
 
-  header { padding: 18px 0; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 70%, transparent); backdrop-filter: blur(8px); position: sticky; top: 0; z-index: 20; }
+  header { padding: 14px 0; background: linear-gradient(180deg, #0f83f2, #0071dc); position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 10px rgba(6,84,186,.25); }
   header .wrap { display: flex; align-items: center; gap: 10px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 700; font-family: Georgia, serif; }
-  .logo { width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; background: linear-gradient(135deg, #059669, #047857); color: #fff; font-size: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: 800; color: #fff; }
+  .logo { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: rgba(255,255,255,.16); color: var(--spark); font-size: 17px; }
   header nav { margin-left: auto; display: flex; gap: 16px; align-items: center; font-size: 13.5px; }
-  header nav a { color: var(--text-2); text-decoration: none; font-weight: 500; }
-  header nav a:hover { color: var(--accent); }
+  header nav a { color: rgba(255,255,255,.88); text-decoration: none; font-weight: 600; }
+  header nav a:hover { color: #fff; }
+  header nav a.cta { background: var(--spark); color: #0e1a2b; padding: 9px 17px; border-radius: 999px; font-weight: 700; }
 
   .btn {
     display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
-    padding: 10px 18px; border-radius: 9px; font-weight: 600; font-size: 14px;
+    padding: 11px 20px; border-radius: 999px; font-weight: 700; font-size: 14px;
     border: 1px solid var(--line); background: var(--panel); color: var(--text);
   }
-  .btn.primary { background: linear-gradient(180deg, #059669 0%, #047857 100%); color: #fff; border-color: transparent; box-shadow: var(--shadow); }
+  .btn.primary { background: linear-gradient(180deg, #0f83f2 0%, #0071dc 100%); color: #fff; border-color: transparent; box-shadow: var(--shadow); }
   .btn.primary:hover { filter: brightness(1.07); }
-  .btn.big { padding: 13px 24px; font-size: 15px; }
+  .btn.spark { background: var(--spark); color: #0e1a2b; border-color: transparent; }
+  .btn.big { padding: 14px 26px; font-size: 15px; }
 
-  .hero { padding: 76px 0 60px; text-align: center; background:
-    radial-gradient(900px 400px at 50% -10%, rgba(4,120,87,.07), transparent 60%); }
-  .hero .badge { display: inline-flex; gap: 7px; align-items: center; font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: 99px; padding: 5px 13px; margin-bottom: 22px; }
-  .hero h1 { font-size: clamp(30px, 5.4vw, 48px); line-height: 1.12; margin: 0 auto 18px; max-width: 21ch; }
-  .hero h1 em { font-style: italic; color: var(--accent); }
-  .hero p { font-size: 17px; color: var(--text-2); max-width: 58ch; margin: 0 auto 30px; }
-  .hero .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .hero { padding: 72px 0 58px; text-align: center; background:
+    radial-gradient(900px 420px at 50% -10%, rgba(0,113,220,.10), transparent 60%),
+    radial-gradient(600px 300px at 90% 10%, rgba(255,194,32,.10), transparent 60%); }
+  .hero .badge { display: inline-flex; gap: 7px; align-items: center; font-size: 12px; font-weight: 700; color: var(--accent-2); background: var(--accent-soft); border: 1px solid var(--accent-ring); border-radius: 99px; padding: 6px 14px; margin-bottom: 22px; }
+  .hero h1 { font-size: clamp(30px, 5.4vw, 50px); line-height: 1.08; margin: 0 auto 18px; max-width: 22ch; font-weight: 800; }
+  .hero h1 .hl { color: var(--accent); }
+  .hero h1 .spark-underline { box-shadow: inset 0 -0.28em 0 var(--spark); }
+  .hero p { font-size: 17px; color: var(--text-2); max-width: 60ch; margin: 0 auto 30px; }
+  .hero .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .hero .sub { margin-top: 14px; font-size: 12.5px; color: var(--muted); }
 
   section { padding: 54px 0; }
   section.alt { background: var(--panel); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
-  .kicker { font-size: 11.5px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
-  h2 { font-size: 27px; margin: 0 0 10px; }
+  .kicker { font-size: 11.5px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  h2 { font-size: 27px; margin: 0 0 10px; font-weight: 800; }
   .lead { color: var(--text-2); font-size: 15px; max-width: 68ch; margin: 0 0 28px; }
 
   .cards3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
@@ -67,13 +72,21 @@
   .card p { font-size: 13.5px; color: var(--text-2); margin: 0; }
   .card ul { font-size: 13.5px; color: var(--text-2); margin: 8px 0 0; padding-left: 18px; }
   .card li { margin-bottom: 5px; }
+  .card.featured { border: 2px solid var(--accent); position: relative; }
+  .card.featured::before { content: "THE ANGLE"; position: absolute; top: -11px; left: 18px; background: var(--spark); color: #0e1a2b; font-size: 10px; font-weight: 800; letter-spacing: .06em; padding: 3px 10px; border-radius: 99px; }
 
-  .rails { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-  .rail { display: flex; gap: 10px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; font-size: 13px; color: var(--text-2); }
-  .rail b { color: var(--text); display: block; margin-bottom: 2px; }
+  .toolgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+  .tool { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 16px 18px; font-size: 13px; color: var(--text-2); box-shadow: var(--shadow); }
+  .tool b { color: var(--text); display: flex; gap: 8px; align-items: center; margin-bottom: 4px; font-size: 13.5px; }
+  .tool .soon { margin-left: auto; background: var(--spark); color: #0e1a2b; font-size: 9.5px; font-weight: 800; padding: 2px 8px; border-radius: 99px; letter-spacing: .05em; }
+
+  .capital { background: linear-gradient(135deg, #0654ba, #0071dc); color: #fff; border-radius: var(--r); padding: 34px 30px; display: flex; gap: 24px; flex-wrap: wrap; align-items: center; box-shadow: 0 12px 32px rgba(6,84,186,.30); }
+  .capital h2 { color: #fff; }
+  .capital p { color: rgba(255,255,255,.85); font-size: 14.5px; max-width: 58ch; margin: 0; }
+  .capital .tag { background: var(--spark); color: #0e1a2b; font-size: 11px; font-weight: 800; letter-spacing: .06em; padding: 4px 12px; border-radius: 99px; display: inline-block; margin-bottom: 10px; }
 
   .quoteband { text-align: center; padding: 60px 0; }
-  .quoteband blockquote { font-family: Georgia, serif; font-size: clamp(20px, 3.4vw, 28px); font-style: italic; max-width: 34ch; margin: 0 auto 10px; line-height: 1.35; }
+  .quoteband blockquote { font-size: clamp(20px, 3.2vw, 27px); font-weight: 700; font-style: italic; max-width: 36ch; margin: 0 auto 10px; line-height: 1.32; }
   .quoteband .who { color: var(--muted); font-size: 13px; }
 
   footer { border-top: 1px solid var(--line); padding: 30px 0 50px; font-size: 12.5px; color: var(--muted); }
@@ -81,7 +94,6 @@
   footer a { color: var(--muted); text-decoration: none; }
   footer a:hover { color: var(--accent); }
   footer .cr { margin-left: auto; }
-  .draftnote { background: rgba(180,83,9,.08); border: 1px solid rgba(180,83,9,.3); color: var(--warn); border-radius: 9px; padding: 8px 14px; font-size: 12px; display: inline-block; }
 </style>
 </head>
 <body>
@@ -89,84 +101,101 @@
 <header><div class="wrap">
   <span class="brand"><span class="logo">◈</span> QuietLot</span>
   <nav>
+    <a href="#brokers">For brokers</a>
     <a href="#how">How it works</a>
-    <a href="#roles">Who it's for</a>
-    <a href="#rails">The rails</a>
+    <a href="#tools">Broker tools</a>
     <a href="app.html">Live demo</a>
-    <a class="btn primary" href="mailto:avieisner@gmail.com?subject=QuietLot%20invite%20request&body=Business%20name%3A%0ARole%20(seller%2Fbroker%2Fbuyer)%3A%0ACategory%3A%0ATypical%20volume%3A%0AWho%20referred%20you%3A">Request invite</a>
+    <a class="cta" href="mailto:avieisner@gmail.com?subject=QuietLot%20invite%20request&body=Business%20name%3A%0ARole%20(seller%2Fbroker%2Fbuyer)%3A%0ACategory%3A%0ATypical%20volume%3A%0AWho%20referred%20you%3A">Request invite</a>
   </nav>
 </div></header>
 
 <div class="hero"><div class="wrap">
   <span class="badge">🔒 Invite-only · B2B wholesale & closeouts</span>
-  <h1>The wholesale marketplace where <em>your source stays yours.</em></h1>
-  <p>Sellers decide exactly who can buy. Brokers sell on their relationships — without ever exposing them.
-  Buyers pick from live, priced offers instead of chasing quotes. Escrowed payments, masked identities,
-  and someone accountable on every order.</p>
-  <div class="cta">
+  <h1>The <span class="hl">middleman's</span> <span class="spark-underline">trust network.</span></h1>
+  <p>Every marketplace ever built tries to cut out the middleman. QuietLot is built to <b>arm</b> them:
+  your relationships become a stocked storefront, your sources stay invisible to your buyers, your margin
+  stays yours — with verified counterparties, masked identities, and payments held until delivery.</p>
+  <div class="cta-row">
     <a class="btn primary big" href="mailto:avieisner@gmail.com?subject=QuietLot%20invite%20request&body=Business%20name%3A%0ARole%20(seller%2Fbroker%2Fbuyer)%3A%0ACategory%3A%0ATypical%20volume%3A%0AWho%20referred%20you%3A">Request an invite</a>
     <a class="btn big" href="app.html">Explore the live demo →</a>
   </div>
   <div class="sub">No public browsing. No cold outreach. You get in when a seller or broker lets you in.</div>
 </div></div>
 
+<section class="alt" id="brokers"><div class="wrap">
+  <div class="kicker">Who it's for</div>
+  <h2>Built around the broker. Good for everyone.</h2>
+  <p class="lead">Anonymous B2B trading is proven at scale — platforms like HUBX passed $200M in year one
+  keeping buyers and suppliers anonymous from each other. QuietLot takes the model where it matters most:
+  the relationship-driven closeout trade, where the middleman IS the market.</p>
+  <div class="cards3">
+    <div class="card featured"><div class="ico">🔗</div><h3>Brokers & middlemen</h3>
+      <ul>
+        <li><b>Source vault:</b> your suppliers are shielded from your buyers by design — not by promise</li>
+        <li>Re-list pallets as cases at your markup; the chain is never exposed</li>
+        <li>Relationships you bring stay yours — enforced non-circumvention with a fair exit price</li>
+        <li>Deal pipeline, flip calculator, buyer book — a real command center</li>
+        <li>Fees drop as your volume grows</li>
+      </ul></div>
+    <div class="card"><div class="ico">🏭</div><h3>Sellers & liquidators</h3>
+      <ul>
+        <li>List once — sell direct and through every broker you approve</li>
+        <li>Price floors and minimums brokers can't break</li>
+        <li>Blind drop-ship under the broker's label</li>
+        <li>Manifests and condition grades built in</li>
+      </ul></div>
+    <div class="card"><div class="ico">🛒</div><h3>Buyers</h3>
+      <ul>
+        <li>Live, priced offers — pick your counterparty, skip the quote chase</li>
+        <li>Private negotiated pricing per channel</li>
+        <li>Funds held until you confirm delivery</li>
+        <li>Verified businesses and portable ratings behind every mask</li>
+      </ul></div>
+  </div>
+</div></section>
+
 <section id="how"><div class="wrap">
   <div class="kicker">How it works</div>
-  <h2>Select, don't inquire.</h2>
-  <p class="lead">In broker-driven markets you inquire and wait while somebody shops their private contacts.
-  On QuietLot the relationships are already provisioned onto the shelf: you see real offers with real prices
-  and pick your counterparty — while everyone's identity stays behind a verified storefront alias.</p>
+  <h2>Masked, verified, accountable.</h2>
   <div class="cards3">
     <div class="card"><div class="ico">🕸️</div><h3>1 · Approval is everything</h3>
       <p>Nothing is public. Sellers approve brokers; sellers and brokers approve buyers. Every relationship
       carries its own terms — minimums, price floors, communication rules, identity reveal.</p></div>
-    <div class="card"><div class="ico">🎭</div><h3>2 · Masked, not anonymous</h3>
-      <p>Every business trades as a verified storefront alias with a real ratings history. The platform
-      always knows who's behind the mask — counterparties don't, until the relationship owner chooses.</p></div>
-    <div class="card"><div class="ico">🔀</div><h3>3 · Brokers stay protected</h3>
-      <p>A broker's suppliers are invisible to that broker's buyers. Re-list a pallet as cases at your markup —
-      your buyer sees your storefront, your price, your terms. The chain is never exposed.</p></div>
+    <div class="card"><div class="ico">🎭</div><h3>2 · Masked, not anonymous-wild-west</h3>
+      <p>Every business trades as a verified storefront alias with a ratings history that can't be reset.
+      The platform always knows who's behind the mask — counterparties don't, until the owner chooses.</p></div>
+    <div class="card"><div class="ico">⚖️</div><h3>3 · Someone owns every order</h3>
+      <p>Whoever owns the buyer relationship owns the order — fulfillment, delivery, disputes. Escrowed
+      payments split automatically per hop when delivery is confirmed.</p></div>
   </div>
 </div></section>
 
-<section class="alt" id="roles"><div class="wrap">
-  <div class="kicker">Who it's for</div>
-  <h2>Three seats at the table.</h2>
-  <div class="cards3">
-    <div class="card"><div class="ico">🏭</div><h3>Sellers & liquidators</h3>
-      <ul>
-        <li>List lots once — sell direct <i>and</i> through every broker you approve</li>
-        <li>Set price floors and minimums brokers can't break</li>
-        <li>Blind drop-ship under the broker's label; you never learn their buyer</li>
-        <li>Manifests and condition grades built in</li>
-      </ul></div>
-    <div class="card"><div class="ico">🔗</div><h3>Brokers</h3>
-      <ul>
-        <li>Your relationships become a stocked storefront — no inventory needed</li>
-        <li>Break pallets into cases at your own markup</li>
-        <li>Your source is shielded from your buyers by design</li>
-        <li>Fees drop as your volume grows</li>
-      </ul></div>
-    <div class="card"><div class="ico">🛒</div><h3>Buyers</h3>
-      <ul>
-        <li>Compare live offers — same product, different units, prices, counterparties</li>
-        <li>Negotiate private pricing per channel</li>
-        <li>Pay into escrow; released only when you confirm delivery</li>
-        <li>Know exactly what you're getting before you pay — grade, manifest, terms</li>
-      </ul></div>
+<section class="alt" id="tools"><div class="wrap">
+  <div class="kicker">Broker tools</div>
+  <h2>A command center, not just a listing page.</h2>
+  <div class="toolgrid">
+    <div class="tool"><b>🧰 Broker HQ</b>Pipeline from lead → negotiation → fulfillment → settled, with live margin tracking.</div>
+    <div class="tool"><b>🔒 Source vault</b>Your supplier book with shield status — proof your buyers can't see behind you.</div>
+    <div class="tool"><b>🧮 Flip calculator</b>Buy price, sell price, quantity — net margin and return on cash, with your real fee tier.</div>
+    <div class="tool"><b>📇 Buyer book</b>Every buyer's terms, bands, and contact rules in one place.</div>
+    <div class="tool"><b>🔀 Relay messaging</b>Stay in the middle of every conversation; contact info stripped automatically.</div>
+    <div class="tool"><b>📣 Blind advertising</b>Promote hard without leaking who you are — platform-served, platform-routed.</div>
+    <div class="tool"><b>🧾 Per-hop invoicing</b>POs and invoices generated with the right identities masked on each document.</div>
+    <div class="tool"><b>💸 Access Capital <span class="soon">COMING SOON</span></b>Vetted funders finance your confirmed POs for a fixed return. Never lose a deal to cash flow.</div>
   </div>
 </div></section>
 
-<section id="rails"><div class="wrap">
-  <div class="kicker">The rails</div>
-  <h2>We handle the parts that need a platform.</h2>
-  <div class="rails">
-    <div class="rail">💰<span><b>Escrowed payments</b>Funds held until delivery is confirmed, then split automatically — seller cost, broker margin, platform fee.</span></div>
-    <div class="rail">🧾<span><b>Invoicing per hop</b>POs and invoices generated with the right identities masked on each document.</span></div>
-    <div class="rail">💬<span><b>Filtered messaging</b>Contact info stripped and flagged. Relay mode keeps the middleman in the middle.</span></div>
-    <div class="rail">⭐<span><b>Portable reputation</b>Double-blind ratings attach to the alias — trust without exposure.</span></div>
-    <div class="rail">📣<span><b>Blind advertising</b>Promote hard without leaking who you are — platform-served, platform-routed.</span></div>
-    <div class="rail">⚖️<span><b>Real accountability</b>Whoever owns the buyer relationship owns the order — routing, delivery, disputes.</span></div>
+<section><div class="wrap">
+  <div class="capital">
+    <div style="flex:1;min-width:260px">
+      <span class="tag">ACCESS CAPITAL — COMING SOON</span>
+      <h2>The deal's good. The cash is coming.</h2>
+      <p>Middlemen die by cash flow: the buyer is committed, the lot is real, and the money is 30 days away.
+      Access Capital will connect platform-vetted funders to confirmed, escrow-secured purchase orders for a
+      fixed return — repaid from settlement, with your source and your buyer masked from the funder too.
+      Deal-by-deal, no bank, no board seat.</p>
+    </div>
+    <a class="btn spark big" href="mailto:avieisner@gmail.com?subject=Access%20Capital%20waitlist&body=I%27m%20interested%20as%3A%20(broker%20needing%20capital%20%2F%20funder%20seeking%20returns)%0ABusiness%20name%3A%0ATypical%20deal%20size%3A">Join the waitlist</a>
   </div>
 </div></section>
 
@@ -177,8 +206,8 @@
 
 <section class="alt"><div class="wrap" style="text-align:center">
   <h2>See it working, right now.</h2>
-  <p class="lead" style="margin:0 auto 24px">The full mechanics are live in an interactive demo — play the seller,
-  the broker, and the buyer on the same order and watch identities stay masked the whole way through.</p>
+  <p class="lead" style="margin:0 auto 24px">Play the seller, the broker, and the buyer on the same order.
+  Watch sources stay hidden, identities stay masked, and margins stay protected — the whole way through.</p>
   <a class="btn primary big" href="app.html">Open the live demo →</a>
 </div></section>
 
