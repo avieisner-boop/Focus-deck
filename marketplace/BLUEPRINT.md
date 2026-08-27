@@ -230,6 +230,24 @@ leaking who they are:
 - Ad billing is separate from trade settlement (card-on-file subscription), so ad spend never
   touches escrow.
 
+### Liquidity signals (HUBX field notes)
+
+From a walkthrough of HUBX's live product (guest surface), the patterns worth copying — first
+three now in the demo:
+
+- **Ticker with real counts, not labels.** "Today's Deals (12) · Price Drop (287) · Just Sold
+  (1244)" — live numbers prove the floor is liquid; "Just Sold" does trust and urgency work at
+  once. QuietLot's market view now carries a channel-scoped ticker (live offers, deals, drops,
+  launches + network-wide sold count, parties masked), and each chip filters the floor.
+- **Daily curated deals with 24h expiry**, "hand-selected and vetted by our team" — human
+  curation positioned as the trust mechanism, not badges. Ops-light and copyable from day one.
+- **Role-split signup** (Vendor vs Buyer doors) — separate onboarding funnels from first click;
+  landing page updated to match.
+- **Per-offer ship-time inline** next to price/qty — part of the compare row, not the detail page.
+- **Saved searches + alert bell** — subscription to supply, drives return visits (M14).
+- Their counter-offer flow lives in messaging ("Seller sent you a counter offer" toast), not a
+  formal bid ladder — validates our negotiation-in-thread design.
+
 ## Broker HQ — the middleman's command center
 
 The broker is the primary customer, and gets first-class tooling, not just listing forms
