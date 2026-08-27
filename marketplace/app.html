@@ -317,11 +317,11 @@ function seed() {
       { id: 'l_oil_src', ownerId: 'a_atlas',    productId: 'p_oil',    sourceId: null, unit: 'pallet', unitContains: 720,  price: 2880, moq: 1,  stock: 14,  active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
       { id: 'l_tom_src', ownerId: 'a_atlas',    productId: 'p_tom',    sourceId: null, unit: 'pallet', unitContains: 1536, price: 2304, moq: 1,  stock: 9,   active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
       { id: 'l_twl_src', ownerId: 'a_meridian', productId: 'p_towel',  sourceId: null, unit: 'carton', unitContains: 48,   price: 336,  moq: 5,  stock: 120, active: true, negotiable: true, teaser: true,  sponsored: false, boostTeaser: true, adStats: { imp: 41, clicks: 3 } },
-      { id: 'l_cof_src', ownerId: 'a_pacific',  productId: 'p_coffee', sourceId: null, unit: 'pallet', unitContains: 100,  price: 950,  moq: 1,  stock: 22,  active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_cof_src', ownerId: 'a_pacific',  productId: 'p_coffee', sourceId: null, unit: 'pallet', unitContains: 100,  price: 950,  justLaunched: true, shipDays: 5, moq: 1,  stock: 22,  active: true, negotiable: true, teaser: true,  sponsored: false, adStats: { imp: 0, clicks: 0 } },
       // derived listings (broker channels)
-      { id: 'l_oil_nx', ownerId: 'a_nexus',   productId: 'p_oil', sourceId: 'l_oil_src', unit: 'case', unitContains: 12, price: 69, moq: 5,  heldStock: 40, active: true, negotiable: true, teaser: true, sponsored: true,  adStats: { imp: 132, clicks: 9 } },
-      { id: 'l_oil_pc', ownerId: 'a_pacific', productId: 'p_oil', sourceId: 'l_oil_src', unit: 'case', unitContains: 12, price: 66, moq: 10, heldStock: 0,  active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } },
-      { id: 'l_tom_nx', ownerId: 'a_nexus',   productId: 'p_tom', sourceId: 'l_tom_src', unit: 'case', unitContains: 24, price: 44, moq: 10, heldStock: 54, active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_oil_nx', ownerId: 'a_nexus',   productId: 'p_oil', sourceId: 'l_oil_src', unit: 'case', unitContains: 12, price: 69, priceWas: 75, shipDays: 2, moq: 5,  heldStock: 40, active: true, negotiable: true, teaser: true, sponsored: true,  adStats: { imp: 132, clicks: 9 } },
+      { id: 'l_oil_pc', ownerId: 'a_pacific', productId: 'p_oil', sourceId: 'l_oil_src', unit: 'case', unitContains: 12, price: 66, shipDays: 4, moq: 10, heldStock: 0,  active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } },
+      { id: 'l_tom_nx', ownerId: 'a_nexus',   productId: 'p_tom', sourceId: 'l_tom_src', unit: 'case', unitContains: 24, price: 44, todaysDeal: true, shipDays: 2, moq: 10, heldStock: 54, active: true, negotiable: true, teaser: true, sponsored: false, adStats: { imp: 0, clicks: 0 } },
     ],
     rels: [
       // seller → broker
@@ -670,7 +670,11 @@ function offerRow(l, opts = {}) {
     <div class="stack" style="min-width:120px">
       <span class="price">${money(effPrice)}<small> /${esc(l.unit)}</small></span>
       <span class="meta">${money(effPrice / l.unitContains)}/${esc(p.baseUnit)}
-        ${nego ? '<span class="chip ok">negotiated</span>' : ''}</span>
+        ${nego ? '<span class="chip ok">negotiated</span>' : ''}
+        ${!nego && l.priceWas && l.priceWas > l.price ? `<span class="chip ok">↓ was ${money(l.priceWas)}</span>` : ''}
+        ${l.todaysDeal ? '<span class="chip gold" title="Hand-picked daily deal — expires tonight">⏳ Today’s deal</span>' : ''}
+        ${l.justLaunched ? '<span class="chip accent">✨ just launched</span>' : ''}</span>
+      <span class="meta">🚚 ships ~${l.shipDays || 3}d</span>
     </div>
     <div class="row">
       <button class="btn primary small" onclick="openOrderModal('${l.id}')">Order</button>
@@ -690,8 +694,24 @@ function vMarket() {
   vis.forEach(l => { (byProd[l.productId] = byProd[l.productId] || []).push(l); });
   const teasers = teaserListings(m.id);
 
+  // HUBX-style live ticker: real counts, not labels — proof the floor is liquid
+  const open = vis.filter(l => !offerSuppressed(l, m.id));
+  const nDeals = open.filter(l => l.todaysDeal).length;
+  const nDrops = open.filter(l => l.priceWas && l.priceWas > l.price).length;
+  const nNew   = open.filter(l => l.justLaunched).length;
+  const nSold  = state.orders.length;
+  const mf = state.session.marketFilter || 'all';
+  const tick = (id, label, n, cls) => `<button class="btn small ${mf === id ? 'primary' : ''}" ${n === 0 && id !== 'all' ? 'disabled' : ''}
+    onclick="setMarketFilter('${id}')">${label} <b>${n}</b></button>`;
   let html = `<h1 class="viewtitle">Marketplace</h1>
-  <p class="viewsub">You only see listings from channels that approved you. Sellers and brokers look identical from here — every storefront is a masked alias. The same product can appear from several channels at different units and prices; pick your counterparty.</p>`;
+  <p class="viewsub">You only see listings from channels that approved you. Sellers and brokers look identical from here — every storefront is a masked alias. The same product can appear from several channels at different units and prices; pick your counterparty.</p>
+  <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:16px">
+    ${tick('all', 'Live offers', open.length)}
+    ${tick('deals', '⏳ Today’s deals', nDeals)}
+    ${tick('drops', '↓ Price drops', nDrops)}
+    ${tick('new', '✨ Just launched', nNew)}
+    <span class="chip ok" title="Orders settled across the whole network — parties stay masked">✅ Just sold in network: <b>&nbsp;${nSold}</b></span>
+  </div>`;
 
   if (sponsored.length) {
     html += `<div class="sponsoredstrip">` + sponsored.map(l => {
@@ -714,6 +734,11 @@ function vMarket() {
     let offers = byProd[pid];
     if (excluded) offers = offers.filter(l => !(l.ownerId === p.ownerId && !l.sourceId));
     offers = offers.filter(l => !offerSuppressed(l, m.id));
+    if (mf !== 'all') {
+      const pred = { deals: l => l.todaysDeal, drops: l => l.priceWas && l.priceWas > l.price, new: l => l.justLaunched }[mf];
+      offers = offers.filter(pred);
+      if (!offers.length) return;
+    }
     const hasBrokerAlt = offers.some(l => l.sourceId && sourceOf(l) && sourceOf(l).ownerId === p.ownerId);
     offers = offers.sort((a, b) => pricePerBase(a) - pricePerBase(b));
     const readdPending = dr && (dr.readd || []).includes(pid);
@@ -767,6 +792,7 @@ function adClick(listingId) {
   const l = listing(listingId); l.adStats.clicks++;
   openOrderModal(listingId);
 }
+function setMarketFilter(f) { state.session.marketFilter = f; render(); }
 
 function requestAccess(channelId) {
   state.rels.push({ id: uid('r'), grantorId: channelId, granteeId: me().id, kind: 'buyer', status: 'pending', requestedBy: me().id,
