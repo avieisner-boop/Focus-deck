@@ -37,6 +37,17 @@
     --shadow-md: 0 2px 6px rgba(0,0,0,.18), 0 1px 2px rgba(0,0,0,.10);
     --shadow-lg: 0 12px 32px rgba(0,0,0,.28), 0 2px 8px rgba(0,0,0,.10);
   }
+  /* Role-accented workspaces: same Hub system, darker in-app accent per
+     section. Public frontend keeps the standard blue; behind the login the
+     accent tells you whose seat you're in. */
+  [data-role="buyer"]  { --accent: #0654ba; --accent-2: #043f8e; --accent-soft: rgba(6,84,186,.10);  --accent-ring: rgba(6,84,186,.30); }
+  [data-role="seller"] { --accent: #047857; --accent-2: #065f46; --accent-soft: rgba(4,120,87,.10);  --accent-ring: rgba(4,120,87,.30); }
+  [data-role="broker"] { --accent: #5b21b6; --accent-2: #4c1d95; --accent-soft: rgba(91,33,182,.10); --accent-ring: rgba(91,33,182,.30); }
+  [data-role="admin"]  { --accent: #9f1239; --accent-2: #881337; --accent-soft: rgba(159,18,57,.10); --accent-ring: rgba(159,18,57,.32); }
+  [data-theme="dark"][data-role="buyer"]  { --accent: #4da3ff; --accent-2: #74b8ff; --accent-soft: rgba(77,163,255,.13);  --accent-ring: rgba(77,163,255,.32); }
+  [data-theme="dark"][data-role="seller"] { --accent: #10b981; --accent-2: #34d399; --accent-soft: rgba(16,185,129,.13);  --accent-ring: rgba(16,185,129,.32); }
+  [data-theme="dark"][data-role="broker"] { --accent: #a78bfa; --accent-2: #c4b5fd; --accent-soft: rgba(167,139,250,.14); --accent-ring: rgba(167,139,250,.32); }
+  [data-theme="dark"][data-role="admin"]  { --accent: #fb7185; --accent-2: #fda4af; --accent-soft: rgba(251,113,133,.14); --accent-ring: rgba(251,113,133,.32); }
   * { box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -69,7 +80,8 @@
   }
   .btn:hover { border-color: var(--accent); background: var(--accent-soft); }
   .btn:active { transform: translateY(1px); }
-  .btn.primary { background: linear-gradient(180deg, #0f83f2 0%, #0071dc 100%); color: #fff; border-color: transparent; }
+  .btn.primary { background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, #fff) 0%, var(--accent) 100%); color: #fff; border-color: transparent; }
+  [data-theme="dark"] .btn.primary { color: #0a1220; font-weight: 700; }
   .btn.primary:hover { filter: brightness(1.08); }
   .btn.danger { color: var(--danger); }
   .btn.danger:hover { background: rgba(239,68,68,.10); border-color: rgba(239,68,68,.45); }
@@ -304,7 +316,8 @@ function seed() {
       { id: 'a_pacific',  name: 'Pacific Goods Inc',   roles: ['seller', 'broker'], alias: 'Pacific Trade Partners',   tagline: 'Specialty food & bev sourcing',                 avatar: '🌊', verified: true, autoRoute: false },
       { id: 'a_nexus',    name: 'Nexus Trading',       roles: ['broker'],           alias: 'Nexus Sourcing Group',     tagline: 'Small-format wholesale, broken-case specialist', avatar: '🔗', verified: true, autoRoute: true },
       { id: 'a_sam',      name: "Sam's Corner Market", roles: ['buyer'],            alias: 'Neighborhood Grocer #2214', tagline: '', avatar: '🛒', verified: true },
-      { id: 'a_river',    name: 'Riverside Deli',      roles: ['buyer'],            alias: 'Riverside Deli Co',        tagline: '', avatar: '🥪', verified: true },
+      { id: 'a_river',    name: 'Riverside Deli',      roles: ['buyer'],            alias: 'Riverside Deli Co',        tagline: '', avatar: '🥪', verified: true, kyb: 'pending' },
+      { id: 'a_admin',    name: 'QuietLot Operations', roles: ['admin'],            alias: 'QuietLot Ops',             tagline: 'Platform operations console', avatar: '🛡️', verified: true },
     ],
     products: [
       { id: 'p_oil',    ownerId: 'a_atlas',    name: 'Organic Extra-Virgin Olive Oil 1L', category: 'Food & Beverage', img: '🫒', baseUnit: 'bottle', desc: 'Cold-pressed, single-estate, current harvest. 12-bottle inner cases.' },
@@ -577,6 +590,7 @@ function toast(msg) {
 
 function navItems() {
   const m = me(); const items = [];
+  if (m.roles.includes('admin')) return [{ id: 'console', icon: '🛡️', label: 'Ops Console' }];
   const isB = m.roles.includes('buyer'), isS = m.roles.includes('seller'), isBr = m.roles.includes('broker');
   if (isB) items.push({ id: 'market', icon: '🏪', label: 'Marketplace' });
   if (isBr) items.push({ id: 'sources', icon: '🧭', label: 'Source Catalog', badge: badgeSources() });
@@ -612,12 +626,14 @@ function badgeSources() {
 
 function render() {
   document.documentElement.dataset.theme = state.session.theme === 'dark' ? 'dark' : 'light';
+  const rr = me().roles;
+  document.documentElement.dataset.role = rr.includes('admin') ? 'admin' : rr.includes('broker') ? 'broker' : rr.includes('seller') ? 'seller' : 'buyer';
   // acting-as switcher
   const sel = document.getElementById('whoami');
   sel.innerHTML = state.accounts.map(a =>
     `<option value="${a.id}" ${a.id === state.session.actingAs ? 'selected' : ''}>${a.avatar} ${esc(a.name)}</option>`).join('');
   document.getElementById('rolechips').innerHTML =
-    me().roles.map(r => `<span class="chip ${r === 'seller' ? 'ok' : r === 'broker' ? 'violet' : 'accent'}">${r}</span>`).join('');
+    me().roles.map(r => `<span class="chip ${r === 'seller' ? 'ok' : r === 'broker' ? 'violet' : r === 'admin' ? 'warn' : 'accent'}">${r}</span>`).join('');
   // sidebar
   const items = navItems();
   if (!items.some(i => i.id === state.session.view)) state.session.view = items[0].id;
@@ -626,7 +642,7 @@ function render() {
     items.map(i => `<button class="navitem ${state.session.view === i.id ? 'active' : ''}" onclick="setView('${i.id}')">
       <span>${i.icon}</span> ${i.label} ${i.badge ? `<span class="badge">${i.badge}</span>` : ''}</button>`).join('');
   // main view
-  const views = { market: vMarket, brokerhq: vBrokerHQ, sources: vSources, products: vProducts, listings: vListings, adsmgr: vAds, deals: vDeals, orders: vOrders, messages: vMessages, network: vNetwork, wallet: vWallet };
+  const views = { market: vMarket, brokerhq: vBrokerHQ, sources: vSources, products: vProducts, listings: vListings, adsmgr: vAds, deals: vDeals, orders: vOrders, messages: vMessages, network: vNetwork, wallet: vWallet, console: vConsole };
   document.getElementById('main').innerHTML = (views[state.session.view] || vMarket)();
   save();
 }
@@ -1046,6 +1062,48 @@ function vAds() {
   }).join('');
   html += `<p class="viewsub" style="margin-top:14px">Off-platform acquisition ads (Google/Meta) work the same way when we build them: they land on a gated invite page that shows category + alias only — never a storefront, never an identity. The click trail dies at the platform's door.</p>`;
   return html;
+}
+
+/* ============ VIEW: OPS CONSOLE (admin) ============ */
+/* The one place legal identities are visible next to aliases — the platform
+   always knows who is behind every mask (SECURITY.md: crown-jewel mapping). */
+function approveKyb(id) { acc(id).kyb = 'verified'; toast(acc(id).name + ' verified — trading enabled'); render(); }
+function vConsole() {
+  const members = state.accounts.filter(a => !a.roles.includes('admin'));
+  const gmv = state.orders.reduce((s, o) => s + o.total, 0);
+  const fees = state.orders.filter(o => !o.upstreamId).reduce((s, o) => s + o.total * PLATFORM_FEE, 0);
+  const flagged = state.threads.flatMap(t => t.messages.map(msg => ({ t, msg }))).filter(x => x.msg.flagged);
+  const pendingKyb = members.filter(a => a.kyb === 'pending');
+  return `<h1 class="viewtitle">Ops Console</h1>
+  <p class="viewsub">Staff only. This is the single place where legal identities appear next to their aliases — the platform knows everyone behind the mask; participants never do.</p>
+  <div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:14px">
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${members.length}</div><span class="meta">member businesses</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${state.orders.length}</div><span class="meta">orders</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px">${money(gmv)}</div><span class="meta">GMV (all hops)</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px;color:var(--ok)">${money(fees)}</div><span class="meta">platform fees (retail hops)</span></div>
+    <div class="card" style="flex:1;min-width:120px;text-align:center"><div class="price" style="font-size:20px;color:${flagged.length ? 'var(--warn)' : 'var(--ok)'}">${flagged.length}</div><span class="meta">flagged messages</span></div>
+  </div>
+  <h2 class="sec">Verification desk ${pendingKyb.length ? `<span class="chip warn">${pendingKyb.length} pending</span>` : ''}</h2>
+  ${members.map(a => `<div class="card"><div class="row between">
+    <div class="row"><span class="avatar">${a.avatar}</span>
+      <div class="stack" style="gap:1px">
+        <b>${esc(a.name)} <span class="meta">→ trades as</span> ${esc(a.alias)}</b>
+        <span class="meta">${a.roles.join(' · ')}${a.tagline ? ' · ' + esc(a.tagline) : ''}</span>
+      </div></div>
+    ${a.kyb === 'pending'
+      ? `<button class="btn small primary" onclick="approveKyb('${a.id}')">Approve KYB</button>`
+      : '<span class="chip ok">✓ verified</span>'}
+  </div></div>`).join('')}
+  <h2 class="sec">Moderation queue</h2>
+  ${flagged.length ? flagged.map(x => `<div class="card"><div class="row between">
+      <div class="stack" style="gap:1px">
+        <span class="meta">${esc((acc(x.msg.from) || {}).alias || 'participant')} — contact info auto-masked before delivery:</span>
+        <span style="font-size:13px">${esc(x.msg.text)}</span>
+      </div>
+      <span class="chip warn">auto-filtered</span>
+    </div></div>`).join('') : '<div class="empty">No flagged messages.</div>'}
+  <h2 class="sec">Disputes desk</h2>
+  <div class="empty">No open disputes. When one opens, the full evidence record appears here: buyer acknowledgment, manifest, delivery confirmation, message log (MARKET-TERMS §8).</div>`;
 }
 
 /* ============ VIEW: BROKER HQ (broker command center) ============ */
